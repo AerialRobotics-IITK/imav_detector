@@ -1,0 +1,12 @@
+*.exe
+*.cmake
+
+CMakeFiles/
+catkin/
+catkin_generated/
+devel/
+test_results/
+bin/
+
+CMakeCache.txt
+MakeFile
