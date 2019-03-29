@@ -1,6 +1,7 @@
 *.exe
 *.cmake
 
+.vscode/
 CMakeFiles/
 catkin/
 catkin_generated/
