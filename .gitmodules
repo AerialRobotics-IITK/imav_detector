@@ -1,0 +1,3 @@
+[submodule "OpenCVTests/MBZIRC_2017_vision"]
+	path = OpenCVTests/MBZIRC_2017_vision
+	url = https://github.com/gestom/MBZIRC_2017_vision

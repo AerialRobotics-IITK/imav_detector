@@ -1,0 +1,11 @@
+Steps to get the image stream from the YI 4K camera:
+1. Switch on the camera's wifi
+2. Connect your pc to the camera's wifi (name is YDXJ something), the default password is 1234567890
+3. Open Terminal, run these commands:
+    a) 'hostname -I' : see your own IP
+    b) 'nmap -sP 192.168.42.0/24' : shows active IPS, one is your pc's, the other is the camera's
+    c) the camera IP should generally be 192.168.42.1, if not replace it with previous command's output below
+        'nc -vvn 192.168.42.1 7878' : connects to port 7878 on the camera
+    d) '{"msg_id":257,"token":0",param":0}' : sends message to camera
+4. from the response of the camera, read the value of the rtsp param. It should generally be 'rtsp://192.168.42.1/live'
+5. put this in your browser and load it, you should see the camera feed on your pc
