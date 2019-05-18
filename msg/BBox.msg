@@ -1,0 +1,17 @@
+int32 boxID
+int32 minX
+int32 minY
+int32 maxX
+int32 maxY
+float32 centreX
+float32 centreY
+int32 pixSize
+int32 contourSize
+float32 areaIndex
+float32[] eigenVal
+float32[] eigenVec
+int32[] cornerX
+int32[] cornerY
+int32[] contourX
+int32[] contourY
+bool full

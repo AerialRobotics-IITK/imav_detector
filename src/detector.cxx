@@ -3,6 +3,8 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <sensor_msgs/Image.h>
 #include <cv_bridge/cv_bridge.h>
+#include <detector/BBoxes.h>
+#include <detector/BBox.h>
 #define MAX_BOXES 10000
 #define MAX_CONTOUR_POINTS 2500
 #define min(a,b) (a>b)?b:a
@@ -11,6 +13,7 @@ int whiteType = -10;
 int borderType = (int)10E4;
 int contourType = (int)10E6;
 bool strictCheckFlag = true;
+int imageID = 0;
 cv::Mat img_, undistImg_;
 
 struct bbox
@@ -40,12 +43,19 @@ void imageCallback(const sensor_msgs::Image msg)
   }
 
   img_ = cv_ptr->image;
+  imageID = msg.header.seq;
   return;
 }
 
-std::vector<struct bbox> floodFill(cv::Mat *input, int minSize, int minAreaIndex)
+std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
 {
     std::vector<struct bbox> bboxes;
+
+    int minSize = 40;
+    int minAreaIndex = 0.4;
+    nh.getParam("box/minSize", minSize);
+    nh.getParam("box/minAreaIndex", minAreaIndex);
+    nh.getParam("box/strictCheck", strictCheckFlag);
 
     int width = input->cols;
     int height = input->rows;
@@ -57,6 +67,9 @@ std::vector<struct bbox> floodFill(cv::Mat *input, int minSize, int minAreaIndex
     int contour_index = 0;
     int numBoxes = 0;
     int pixType = 0;
+
+    int *stack = (int *)calloc(res, sizeof(int));
+    int *contour = (int *)calloc(res, sizeof(int));
 
     int* buffer = (int*)calloc(res, sizeof(int));
     for(int i=0; i<res; i++)
@@ -97,9 +110,6 @@ std::vector<struct bbox> floodFill(cv::Mat *input, int minSize, int minAreaIndex
         {
             queueEnd = queueStart = 0;
             contour_index = 0;
-
-            int *stack = (int *)calloc(res, sizeof(int));
-            int *contour = (int *)calloc(res, sizeof(int));
 
             struct bbox Box;
             Box.id = numBoxes+1;
@@ -261,21 +271,60 @@ std::vector<struct bbox> floodFill(cv::Mat *input, int minSize, int minAreaIndex
                     Box.cornerY[i] = cY[i]+fsy;
                 }
                 bboxes.push_back(Box);
-                free(stack);
-                free(contour);
             }
             else
             {
                 numBoxes--;
-                free(stack);
-                free(contour);
             }   
         }
     }
 
+    free(stack);
+    free(contour);
     free(buffer);
     return bboxes;
 }  
+
+detector::BBoxes createMsg(std::vector<struct bbox> *ptr)
+{
+    detector::BBoxes obj_msg; 
+    struct bbox *box;
+    for(unsigned int i=0; i < ptr->size(); i++)
+    {
+        box = &(ptr->at(i));
+        detector::BBox temp;
+        temp.boxID = box->id;
+        temp.minX = box->x_min;
+        temp.minY = box->y_min;
+        temp.maxX = box->x_max;
+        temp.maxY = box->y_max;
+        temp.centreX = box->x_mean;
+        temp.centreY = box->y_mean;
+        temp.pixSize = box->pixSize;
+        temp.contourSize = box->contourSize;
+        temp.areaIndex = box->areaIndex;
+        temp.full = !box->warning;
+        for(int j=0; j<4; j++)
+        {
+            temp.cornerX.push_back(box->cornerX[j]);
+            temp.cornerY.push_back(box->cornerY[j]);
+        }
+        for(int j=0; j<box->contourSize; j++)
+        {
+            temp.contourX.push_back(box->contourX[j]);
+            temp.contourY.push_back(box->contourY[j]);
+        }
+        if(strictCheckFlag)
+        {
+            temp.eigenVal.push_back(box->eigvl0);
+            temp.eigenVal.push_back(box->eigvl1);
+            temp.eigenVec.push_back(box->v0);
+            temp.eigenVec.push_back(box->v1);
+        }
+        obj_msg.objects.push_back(temp);
+    }
+    return obj_msg;
+}
 
 
 int main(int argc, char **argv)
@@ -284,6 +333,8 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "detector");
     ros::NodeHandle nh;
     ros::Subscriber image_sub = nh.subscribe<sensor_msgs::Image>("image", 1000, imageCallback);
+    ros::Publisher bbox_pub = nh.advertise<detector::BBoxes>("bounding_boxes",10);
+    
     std::vector<double> tempList;
     cv::Mat distCoeffs = cv::Mat_<double>(1,5);
     nh.getParam("camera/distortion_coefficients", tempList);
@@ -302,18 +353,15 @@ int main(int argc, char **argv)
         }
     }
 
-    int minPixSize, minAreaIndex;
-    nh.getParam("box/minSize", minPixSize);
-    nh.getParam("box/minAreaIndex", minAreaIndex);
-    
-    nh.getParam("box/strictCheck", strictCheckFlag);
-
-
     while (nh.ok())
     {
+        while(imageID < 1) ros::spinOnce();
         cv::undistort(img_, undistImg_, intrinsic, distCoeffs);
-        std::vector<struct bbox> objects = floodFill(&undistImg_, minPixSize, minAreaIndex);
-        ros::spinOnce();
+        std::vector<struct bbox> objects = floodFill(&undistImg_, nh);
+        detector::BBoxes msg = createMsg(&objects);
+        msg.stamp = ros::Time::now();
+        msg.imageID = imageID;
+        bbox_pub.publish(msg);
     }
     return 0;
 }
