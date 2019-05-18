@@ -333,17 +333,22 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "detector");
     ros::NodeHandle nh;
     ros::Subscriber image_sub = nh.subscribe<sensor_msgs::Image>("image", 1000, imageCallback);
+    std::cout<<"check1"<<std::endl;
     ros::Publisher bbox_pub = nh.advertise<detector::BBoxes>("bounding_boxes",10);
     
     std::vector<double> tempList;
     cv::Mat distCoeffs = cv::Mat_<double>(1,5);
-    nh.getParam("camera/distortion_coefficients", tempList);
+    nh.getParam("detect_node/camera/distortion_coefficients", tempList);
+        std::cout<<"check2"<<std::endl;
+
     for(int i=0; i<5; i++)
     {
         distCoeffs.at<double>(i) = tempList[i];
     }
+        std::cout<<"check3"<<std::endl;
+
     cv::Mat intrinsic = cv::Mat_<double>(3,3);
-    nh.getParam("camera/intrinsic_parameters", tempList);
+    nh.getParam("detect_node/camera/intrinsic_parameters", tempList);
     int tempIdx=0;
     for(int i=0; i<3; i++)
     {
@@ -362,6 +367,7 @@ int main(int argc, char **argv)
         msg.stamp = ros::Time::now();
         msg.imageID = imageID;
         bbox_pub.publish(msg);
+        ros::spinOnce();
     }
     return 0;
 }
