@@ -13,9 +13,10 @@
         <rosparam file="$(find aruco_ros)/cfg/input.yaml" />
         <remap from="colour_image" to="usb_cam/image_raw" />
     </node>  
+    
+  <rosparam command="load" file="$(find detector)/cfg/params.yaml"/>
 
   <node name="detect_node" pkg="detector" type="detector_node" output="screen">
-    <rosparam file="$(find detector)/cfg/params.yaml"/>
     <remap from="image" to="/threshold_image"/>
     <remap from="bounding_boxes" to="bounding_boxes"/>
   </node>
