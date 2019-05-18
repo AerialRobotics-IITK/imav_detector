@@ -8,6 +8,7 @@ catkin_generated/
 devel/
 test_results/
 bin/
+build/
 
 CMakeCache.txt
 MakeFile
