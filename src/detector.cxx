@@ -64,12 +64,12 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
 
     int minSize = 40;
     int minAreaIndex = 0.4;
-    nh.getParam("box/minSize", minSize);
-    nh.getParam("box/minAreaIndex", minAreaIndex);
+    nh.getParam("/detect_node/box/minSize", minSize);
+    nh.getParam("/detect_node/box/minAreaIndex", minAreaIndex);
 
-    nh.getParam("flags/strictCheck", strictCheckFlag);
-    nh.getParam("flags/debug", debug);
-    nh.getParam("flags/rqt", rqt);
+    nh.getParam("/detect_node/flags/strictCheck", strictCheckFlag);
+    nh.getParam("/detect_node/flags/debug", debug);
+    nh.getParam("/detect_node/flags/rqt", rqt);
 
     int width = input->cols;
     int height = input->rows;
@@ -183,6 +183,7 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
                 {
                     pixPos = contour[j];
                     buffer[pixPos] = contourType + numBoxes;
+                    if(rqt)markedImg_.at<cv::Vec3b>(pixPos%width, pixPos/width) = color(numBoxes);
                 }
                 
                 long long int sx, sy;
@@ -291,29 +292,29 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
 
                 if(rqt)
                 {
-                    markedImg_ = cv::Mat(height, width, CV_8UC3);
-                    for(int i=0; i<res; i++)
-                    {
-                        cv::Vec3b pixel = BLACK;
+                //     markedImg_ = cv::Mat(height, width, CV_8UC3);
+                //     for(int i=0; i<res; i++)
+                //     {
+                //         cv::Vec3b pixel = BLACK;
 
-                        if(buffer[i]==borderType)
-                        {
-                            pixel = GRAY;
-                        }
-                        else
-                        {
-                            if(buffer[i]>contourType)
-                            {
-                                pixel = color(buffer[i]-contourType);
-                            }
-                            else if(buffer[i]>0)
-                            {
-                                pixel = WHITE;
-                            }
+                //         if(buffer[i]==borderType)
+                //         {
+                //             pixel = GRAY;
+                //         }
+                //         else
+                //         {
+                //             if(buffer[i]>contourType)
+                //             {
+                //                 pixel = color(buffer[i]-contourType);
+                //             }
+                //             else if(buffer[i]>0)
+                //             {
+                //                 pixel = WHITE;
+                //             }
                             
-                        }
-                        markedImg_.at<cv::Vec3b>(i % width, i / width) = pixel;
-                    }
+                //         }
+                //         markedImg_.at<cv::Vec3b>(i % width, i / width) = pixel;
+                //     }
 
                 }
 
@@ -390,13 +391,13 @@ int main(int argc, char **argv)
     
     std::vector<double> tempList;
     cv::Mat distCoeffs = cv::Mat_<double>(1,5);
-    nh.getParam("camera/distortion_coefficients", tempList);
+    nh.getParam("/detect_node/camera/distortion_coefficients", tempList);
     for(int i=0; i<5; i++)
     {
         distCoeffs.at<double>(i) = tempList[i];
     }
     cv::Mat intrinsic = cv::Mat_<double>(3,3);
-    nh.getParam("camera/intrinsic_parameters", tempList);
+    nh.getParam("/detect_node/camera/intrinsic_parameters", tempList);
     int tempIdx=0;
     for(int i=0; i<3; i++)
     {
@@ -415,6 +416,7 @@ int main(int argc, char **argv)
             sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", undistImg_).toImageMsg();  
             undist_imgPub.publish(msg);
         }
+        cv::cvtColor(undistImg_, markedImg_, CV_GRAY2BGR);
         std::vector<struct bbox> objects = floodFill(&undistImg_, nh);
         detector::BBoxes msg = createMsg(&objects);
         msg.stamp = ros::Time::now();
