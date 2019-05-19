@@ -1,10 +1,10 @@
 camera:
-  distortion_coefficients:  [-0.273203, 0.060306, 0.000295, 0.000624, 0.000000]
-  intrinsic_parameters: [416.089645, 0.000000, 378.447834, 0.000000, 416.610401, 257.467186, 0.000000, 0.000000, 1.000000]
+  distortion_coefficients:  [-0.108400, 0.141934, -0.000856, 0.004049, 0.000000]
+  intrinsic_parameters: [548.061325, 0.000000, 306.931549, 0.000000, 546.563662, 218.531695, 0.000000, 0.000000, 1.000000]
 box:
-  minSize: 40
-  minAreaIndex: 0.7
+  minSize: 400
+  minAreaIndex: 0.2
 flags:
   strictCheck: false
   rqt: true
-  debug: true
+  debug: false

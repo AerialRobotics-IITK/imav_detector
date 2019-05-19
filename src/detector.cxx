@@ -8,17 +8,21 @@
 #include <detector/BBox.h>
 #define MAX_BOXES 10000
 #define MAX_CONTOUR_POINTS 2500
-#define BLACK (0,0,0)
-#define WHITE (255,255,255)
-#define GRAY (128,128,128)
 #define min(a,b) (a>b)?b:a
+
+cv::Vec3b BLACK = (0,0,0);
+cv::Vec3b RED = (255,0,0);
+cv::Vec3b BLUE = (0,0,255);
+cv::Vec3b GREEN = (0,255,0);
 
 int whiteType = -10;
 int borderType = (int)10E4;
 int contourType = (int)10E6;
+
 bool strictCheckFlag = false;
 bool rqt = true;
 bool debug = true;
+
 int imageID = 0;
 cv::Mat img_, undistImg_, markedImg_;
 
@@ -50,20 +54,17 @@ void imageCallback(const sensor_msgs::Image msg)
 
   img_ = cv_ptr->image;
   imageID = msg.header.seq;
+  markedImg_ = cv::Mat(msg.height, msg.width, CV_8UC3);
   return;
 }
 
-cv::Vec3b color(int num)
-{
-    return (255 - (num%32)*8, (num%32)*8, (num%32<31) ? (num%32+1)*8 : num%32*8);
-}
-
-std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
+std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh, cv::Mat *output)
 {
     std::vector<struct bbox> bboxes;
+    *output = *input;
 
-    int minSize = 40;
-    int minAreaIndex = 0.4;
+    int minSize = 4000;
+    double minAreaIndex = 0.4;
     nh.getParam("/detect_node/box/minSize", minSize);
     nh.getParam("/detect_node/box/minAreaIndex", minAreaIndex);
 
@@ -88,7 +89,7 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
     int* buffer = (int*)calloc(res, sizeof(int));
     for(int i=0; i<res; i++)
     {
-        if(input->at<uchar>(i/width, i%width)!=0)
+        if(input->at<cv::Vec3b>(cv::Point(i%width, i/width))!=BLACK)
         {
             buffer[i]=whiteType;
         }
@@ -129,6 +130,7 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
             Box.id = numBoxes+1;
             Box.warning = 0;
             Box.pixSize = 1;            
+            
             maxX = minX = Box.x_max = Box.x_min = i%width;
             maxY = minY = Box.y_max = Box.y_min = i/width;
 
@@ -153,12 +155,13 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
                     {
                         stack[queueEnd++] = pixPos;
                         buffer[pixPos] = numBoxes;
-                        dx = i%width;
-                        dy = i/width;
-                        if(maxX < dx) maxX = dx;
-                        if(minX > dx) minX = dx;
-                        if(minY > dy) minY = dy;
-                        if(maxY < dy) maxY = dy;
+                        dx = pixPos%width;
+                        dy = pixPos/width;
+
+                        if(dx > maxX) maxX = dx;
+                        if(dx < minX) minX = dx;
+                        if(dy > maxY) maxY = dy;
+                        if(dy < minY) minY = dy;
                     }
 
                     if(buffer[pixPos]==borderType) Box.warning = 1;
@@ -167,14 +170,14 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
                 if (nPix!=4) contour[contour_index++] = pixPos;
             }
 
-            if(queueEnd <= minSize)
+            if(queueEnd > minSize)
             {
-                queueEnd = 0;
+                Box.areaIndex = fabs((float)(maxX-minX+1)*(maxY-minY+1)/queueEnd - 1);
+                if(Box.areaIndex > minAreaIndex) queueEnd = 0; 
             }
             else
             {
-                Box.areaIndex = fabs((maxX-minX+1)*(maxY-minY+1)/queueEnd - 1);
-                if(Box.areaIndex > minAreaIndex) queueEnd = 0; 
+                queueEnd = 0;
             }
 
             if(queueEnd>0)
@@ -183,11 +186,12 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
                 {
                     pixPos = contour[j];
                     buffer[pixPos] = contourType + numBoxes;
-                    if(rqt)markedImg_.at<cv::Vec3b>(pixPos%width, pixPos/width) = color(numBoxes);
+                    // does not show colors other than blue
+                    if(rqt) output->at<cv::Vec3b>(cv::Point(pixPos%width, pixPos/width)) = BLUE;
                 }
                 
-                long long int sx, sy;
-                long long int cxx,cxy,cyy; 
+                long long int sx=0, sy=0;
+                long long int cxx=0,cxy=0,cyy=0; 
 
                 for(int s=0; s<queueEnd; s++)
                 {
@@ -211,11 +215,14 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
                     float fcxx = ((float)cxx/queueEnd-fsx*fsx);
                     float fcxy = ((float)cxy/queueEnd-fsx*fsy);
                     float fcyy = ((float)cyy/queueEnd-fsy*fsy);
+
                     float det = (fcxx+fcyy)*(fcxx+fcyy)-4*(fcxx*fcyy-fcxy*fcxy);
                     if(det>0) det = sqrt(det); else det = 0;
+
                     float eigvl0 = ((fcxx+fcyy)+det)/2;
                     float eigvl1 = ((fcxx+fcyy)-det)/2;
                     float eivec = (fcxy*fcxy+(fcxx-eigvl0)*(fcxx-eigvl0));
+
                     if(fcyy!=0 && eivec > 0)
                     {
                         Box.v0 = -fcxy/sqrt(eivec);
@@ -242,9 +249,11 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
                 Box.y_min = minY;
                 Box.y_max = maxY;
 
-                int corners = 0, cx, cy;
-                int cX[4], cY[4];
-                float dist, maxDist;
+                int corners = 0;
+                float cx=0, cy=0;
+                float cX[4], cY[4];
+                float dist=0, maxDist=0;
+
                 for(int i=0; i<4; i++)
                 {
                     maxDist=0;
@@ -253,23 +262,25 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
                         pixPos = contour[s];
                         cx = pixPos%width - fsx;
                         cy = pixPos/width - fsy;
+
                         dist = 0;
                         if(i > 0)
                         {
                             for(int j=0; j<i; j++)
                             {
-                                dist += sqrt((cx - cX[i])*(cx-cX[i])+(cy-cY[i])*(cy-cY[i]));
+                                dist += sqrt((cx - cX[j])*(cx-cX[j])+(cy-cY[j])*(cy-cY[j]));
                             }
                         }
                         else
                         {
                             dist = cx*cx + cy*cy;
+
                             if(debug)
                             {   
                                 if(s < MAX_CONTOUR_POINTS)
                                 {
-                                    Box.contourX[s] = cx+fsx;
-                                    Box.contourY[s] = cy+fsy;
+                                    Box.contourX[s] = cx+fsx-minX;
+                                    Box.contourY[s] = cy+fsy-minY;
                                 }
                             }
                         }
@@ -283,39 +294,11 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
                     }
                 }
                 Box.contourSize = min(contour_index, MAX_CONTOUR_POINTS);
-                
+
                 for(int i=0; i<4; i++)
                 {
                     Box.cornerX[i] = cX[i]+fsx;
                     Box.cornerY[i] = cY[i]+fsy;
-                }
-
-                if(rqt)
-                {
-                //     markedImg_ = cv::Mat(height, width, CV_8UC3);
-                //     for(int i=0; i<res; i++)
-                //     {
-                //         cv::Vec3b pixel = BLACK;
-
-                //         if(buffer[i]==borderType)
-                //         {
-                //             pixel = GRAY;
-                //         }
-                //         else
-                //         {
-                //             if(buffer[i]>contourType)
-                //             {
-                //                 pixel = color(buffer[i]-contourType);
-                //             }
-                //             else if(buffer[i]>0)
-                //             {
-                //                 pixel = WHITE;
-                //             }
-                            
-                //         }
-                //         markedImg_.at<cv::Vec3b>(i % width, i / width) = pixel;
-                //     }
-
                 }
 
                 bboxes.push_back(Box);
@@ -330,6 +313,7 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh)
     free(stack);
     free(contour);
     free(buffer);
+
     return bboxes;
 }  
 
@@ -337,10 +321,12 @@ detector::BBoxes createMsg(std::vector<struct bbox> *ptr)
 {
     detector::BBoxes obj_msg; 
     struct bbox *box;
+
     for(unsigned int i=0; i < ptr->size(); i++)
     {
         box = &(ptr->at(i));
         detector::BBox temp;
+
         temp.boxID = box->id;
         temp.minX = box->x_min;
         temp.minY = box->y_min;
@@ -352,11 +338,13 @@ detector::BBoxes createMsg(std::vector<struct bbox> *ptr)
         temp.contourSize = box->contourSize;
         temp.areaIndex = box->areaIndex;
         temp.full = !box->warning;
+
         for(int j=0; j<4; j++)
         {
             temp.cornerX.push_back(box->cornerX[j]);
             temp.cornerY.push_back(box->cornerY[j]);
         }
+
         if(debug)
         {
             for(int j=0; j<box->contourSize; j++)
@@ -365,6 +353,7 @@ detector::BBoxes createMsg(std::vector<struct bbox> *ptr)
                 temp.contourY.push_back(box->contourY[j]);
             }
         }
+
         if(strictCheckFlag)
         {
             temp.eigenVal.push_back(box->eigvl0);
@@ -372,6 +361,7 @@ detector::BBoxes createMsg(std::vector<struct bbox> *ptr)
             temp.eigenVec.push_back(box->v0);
             temp.eigenVec.push_back(box->v1);
         }
+
         obj_msg.objects.push_back(temp);
     }
     return obj_msg;
@@ -380,22 +370,26 @@ detector::BBoxes createMsg(std::vector<struct bbox> *ptr)
 
 int main(int argc, char **argv)
 {
-
     ros::init(argc, argv, "detector");
+
     ros::NodeHandle nh;
-    image_transport::ImageTransport it(nh);
     ros::Subscriber image_sub = nh.subscribe<sensor_msgs::Image>("image", 1000, imageCallback);
+    ros::Publisher bbox_pub = nh.advertise<detector::BBoxes>("bounding_boxes",10);
+
+    image_transport::ImageTransport it(nh);
     image_transport::Publisher undist_imgPub = it.advertise("undist_image",10);
     image_transport::Publisher marked_imgPub = it.advertise("marked_image", 10);
-    ros::Publisher bbox_pub = nh.advertise<detector::BBoxes>("bounding_boxes",10);
     
+    ros::Rate loop_rate(30);
     std::vector<double> tempList;
+
     cv::Mat distCoeffs = cv::Mat_<double>(1,5);
     nh.getParam("/detect_node/camera/distortion_coefficients", tempList);
     for(int i=0; i<5; i++)
     {
         distCoeffs.at<double>(i) = tempList[i];
     }
+
     cv::Mat intrinsic = cv::Mat_<double>(3,3);
     nh.getParam("/detect_node/camera/intrinsic_parameters", tempList);
     int tempIdx=0;
@@ -411,22 +405,26 @@ int main(int argc, char **argv)
     {
         while(imageID < 1) ros::spinOnce();
         cv::undistort(img_, undistImg_, intrinsic, distCoeffs);
+
         if(rqt)
         {
             sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", undistImg_).toImageMsg();  
             undist_imgPub.publish(msg);
         }
-        cv::cvtColor(undistImg_, markedImg_, CV_GRAY2BGR);
-        std::vector<struct bbox> objects = floodFill(&undistImg_, nh);
+
+        std::vector<struct bbox> objects = floodFill(&undistImg_, nh, &markedImg_);
         detector::BBoxes msg = createMsg(&objects);
         msg.stamp = ros::Time::now();
         msg.imageID = imageID;
         bbox_pub.publish(msg);
-        if (rqt)
+
+        if(rqt)
         {
             sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", markedImg_).toImageMsg();
             marked_imgPub.publish(msg);
         }
+
+        loop_rate.sleep();
         ros::spinOnce();
     }
     return 0;
