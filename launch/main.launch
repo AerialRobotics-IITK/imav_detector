@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="log" >
+  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="screen" >
     <param name="video_device" value="/dev/video0" />
     <param name="image_width" value="640" />
     <param name="image_height" value="480" />
@@ -9,13 +9,13 @@
     <param name="io_method" value="mmap"/>
   </node>
 
-    <node name="input" type="input" pkg="aruco_ros" output="screen">
-        <rosparam file="$(find aruco_ros)/cfg/input.yaml" />
+    <node name="threshold" type="thresh_node" pkg="detector" output="screen">
+        <rosparam file="$(find detector)/cfg/threshold.yaml" />
         <remap from="colour_image" to="usb_cam/image_raw" />
     </node>  
     
-  <node name="detect_node" pkg="detector" type="detector_node" output="screen">
-    <rosparam file="$(find detector)/cfg/params.yaml"/>
+  <node name="detector" pkg="detector" type="detector_node" output="screen">
+    <rosparam file="$(find detector)/cfg/detector.yaml"/>
     <remap from="image" to="/threshold_image"/>
     <remap from="bounding_boxes" to="bounding_boxes"/>
   </node>

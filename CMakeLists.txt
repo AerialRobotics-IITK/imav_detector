@@ -15,3 +15,4 @@ find_package(OpenCV 3 REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 cs_add_executable(detector_node src/detector.cxx)
+cs_add_executable(thresh_node src/threshold.cxx)
