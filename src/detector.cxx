@@ -1,71 +1,4 @@
-#include <ros/ros.h>
-#include <image_transport/image_transport.h>
-#include <std_msgs/Header.h>
-#include <opencv2/highgui/highgui.hpp>
-#include <sensor_msgs/Image.h>
-#include <cv_bridge/cv_bridge.h>
-#include <detector/BBoxes.h>
-#include <detector/BBox.h>
-
-#define MAX_BOXES 10000
-#define MAX_CONTOUR_POINTS 2500
-
-#define min(a,b) (a>b)?b:a
-#define check(X) std::cout<<"check "<<X<<std::endl
-
-cv::Vec3b BLACK = (0,0,0);
-cv::Vec3b RED = (255,0,0);
-cv::Vec3b BLUE = (0,0,255);
-cv::Vec3b GREEN = (0,255,0);
-
-int whiteType = -10;
-int borderType = (int)10E4;
-int contourType = (int)10E6;
-
-bool eigenCheckFlag = true;
-bool diagCheckFlag = true;
-bool areaCheckFlag = true;
-bool debug = true;
-bool verbose = false;
-
-bool eigenPassed = false;
-bool diagPassed = false;
-bool areaPassed = false;
-bool passed = false;
-
-int imageID = 0;
-cv::Mat img_, undistImg_, markedImg_;
-
-struct bbox
-{
-    int rangeX[2], rangeY[2];
-    float x_mean, y_mean;
-    int warning, id, pixSize, contourSize;
-    float areaIndex, diagIndex;
-    float eigenIndex, eigvl0, eigvl1, v0, v1;
-    int contourX[MAX_CONTOUR_POINTS];
-    int contourY[MAX_CONTOUR_POINTS];
-    int cornerX[4], cornerY[4];
-};
-
-void imageCallback(const sensor_msgs::Image msg)
-{
-  cv_bridge::CvImagePtr cv_ptr;
-  try
-  {
-      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-  }
-  catch (cv_bridge::Exception &e)
-  {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
-      return;
-  }
-
-  img_ = cv_ptr->image;
-  imageID = msg.header.seq;
-  markedImg_ = cv::Mat(msg.height, msg.width, CV_8UC3);
-  return;
-}
+#include "detector.h"
 
 std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh, cv::Mat *output)
 {
@@ -452,9 +385,10 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "detector");
 
     ros::NodeHandle nh;
-    ros::Subscriber image_sub = nh.subscribe<sensor_msgs::Image>("image", 1000, imageCallback);
+    ros::Subscriber image_sub = nh.subscribe<sensor_msgs::Image>("image", 30, imageCallback);
+    ros::Subscriber odom_sub = nh.subscribe<nav_msgs::Odometry>("odometry", 10, odomCallback);
     ros::Publisher bbox_pub = nh.advertise<detector::BBoxes>("bounding_boxes",10);
-
+    ros::Publisher pose_pub = nh.advertise<detector::BBPoses>("object_poses",10);
     image_transport::ImageTransport it(nh);
     image_transport::Publisher undist_imgPub = it.advertise("undist_image",10);
     image_transport::Publisher marked_imgPub = it.advertise("marked_image", 10);
@@ -469,7 +403,6 @@ int main(int argc, char **argv)
         distCoeffs.at<double>(i) = tempList[i];
     }
 
-    cv::Mat intrinsic = cv::Mat_<double>(3,3);
     nh.getParam("/detector/camera/intrinsic_parameters", tempList);
     int tempIdx=0;
     for(int i=0; i<3; i++)
@@ -484,24 +417,22 @@ int main(int argc, char **argv)
     {
         while(imageID < 1) ros::spinOnce();
         cv::undistort(img_, undistImg_, intrinsic, distCoeffs);
-
-        if(debug)
-        {
-            sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", undistImg_).toImageMsg();  
-            undist_imgPub.publish(msg);
-        }
-
         std::vector<struct bbox> objects = floodFill(&undistImg_, nh, &markedImg_);
-
-        detector::BBoxes msg = createMsg(&objects);
-        msg.stamp = ros::Time::now();
-        msg.imageID = imageID;
-        bbox_pub.publish(msg);
+        detector::BBPoses pose_msg = findPoses(&objects, nh);
+        pose_msg.stamp = ros::Time::now();
+        pose_msg.imageID = imageID;
+        pose_pub.publish(pose_msg);
 
         if(debug)
-        {
-            sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", markedImg_).toImageMsg();
-            marked_imgPub.publish(msg);
+        {   
+            sensor_msgs::ImagePtr undist_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", undistImg_).toImageMsg();  
+            undist_imgPub.publish(undist_msg);
+            detector::BBoxes msg = createMsg(&objects);
+            msg.stamp = ros::Time::now();
+            msg.imageID = imageID;
+            bbox_pub.publish(msg);
+            sensor_msgs::ImagePtr marked_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", markedImg_).toImageMsg();
+            marked_imgPub.publish(marked_msg);
         }
 
         loop_rate.sleep();

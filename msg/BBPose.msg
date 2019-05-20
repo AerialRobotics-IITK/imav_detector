@@ -1,0 +1,2 @@
+int32 boxID
+geometry_msgs/Point position

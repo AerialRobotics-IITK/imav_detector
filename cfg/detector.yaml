@@ -1,14 +1,26 @@
-camera:
+camera: 
   distortion_coefficients:  [-0.108400, 0.141934, -0.000856, 0.004049, 0.000000]
   intrinsic_parameters: [548.061325, 0.000000, 306.931549, 0.000000, 546.563662, 218.531695, 0.000000, 0.000000, 1.000000]
-box:
+  translation:
+    x: 0
+    y: 0
+    z: 0
+
+box: 
   minSize: 2000
   maxAreaIndex: 0.2
   maxEigenIndex: 1.069
   maxDiagIndex: 75
-flags:
+
+flags: 
   areaCheck: true
   diagCheck: true
   eigenCheck: true
   debug: true
   verbose: false
+
+expectedSizes: 
+  red: 0
+  yellow: 0
+  blue: 0 
+  orange: 0
