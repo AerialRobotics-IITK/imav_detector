@@ -91,7 +91,7 @@ detector::BBPoses findPoses(std::vector<struct bbox> *ptr, ros::NodeHandle nh)
     struct bbox *box;
     
     Eigen::Matrix4f camMatrix, quadToCam, globToQuad;
-    Eigen::Matrix4f invCamMatrix, camToQuad, quadToGlob;
+    Eigen::Matrix4f invCamMatrix, camToQuad, quadToGlob, scaleUp;
 
     tf::Quaternion q1(odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, odom.pose.pose.orientation.z, odom.pose.pose.orientation.w);
     Eigen::Quaternionf quat = Eigen::Quaternionf(q1.w(), q1.x(), q1.y(), q1.z());
@@ -108,17 +108,17 @@ detector::BBPoses findPoses(std::vector<struct bbox> *ptr, ros::NodeHandle nh)
         {
             if(i==3) 
             {
-                if(j==3) camMatrix(i,j) = quadToCam(i, j) = globToQuad(i, j) = 1;
-                else camMatrix(i, j) = quadToCam(i, j) = globToQuad(i, j) = 0;
+                if(j==3) camMatrix(i,j) = quadToCam(i, j) = globToQuad(i, j) = scaleUp(i, j) = 1;
+                else camMatrix(i, j) = quadToCam(i, j) = globToQuad(i, j) = scaleUp(i,j) = 0;
             }
             else if(j==3)
             {
-                camMatrix(i, j) = 0;
+                camMatrix(i, j) = scaleUp(i, j) = 0;
                 switch(i)
                 {
-                    case 0: quadToCam(i, j) = tCamX; globToQuad(i, j) = odom.pose.pose.position.x; break;
-                    case 1: quadToCam(i, j) = tCamY; globToQuad(i, j) = odom.pose.pose.position.y; break;
-                    case 2: quadToCam(i, j) = tCamZ; globToQuad(i, j) = odom.pose.pose.position.z; break;
+                    case 0: quadToCam(i, j) = tCamX; globToQuad(i, j) = -odom.pose.pose.position.x; break;
+                    case 1: quadToCam(i, j) = tCamY; globToQuad(i, j) = -odom.pose.pose.position.y; break;
+                    case 2: quadToCam(i, j) = tCamZ; globToQuad(i, j) = -odom.pose.pose.position.z; break;
                 }
             }
             else
@@ -126,6 +126,7 @@ detector::BBPoses findPoses(std::vector<struct bbox> *ptr, ros::NodeHandle nh)
                 camMatrix(i, j) = intrinsic.at<double>(i,j);
                 globToQuad(i, j) = rotQuadtoCam(i, j);
                 quadToCam(i, j) = ((i+j)%3 == 1) ? -1 : 0;
+                scaleUp(i, j) = (i==j) ? odom.pose.pose.position.z : 0;
             }
         }
     }
@@ -142,11 +143,11 @@ detector::BBPoses findPoses(std::vector<struct bbox> *ptr, ros::NodeHandle nh)
         temp.boxID = box->id;
 
         Eigen::Vector4f imgVec(box->x_mean,box->y_mean,1,1);
-        Eigen::Vector4f globCoord = quadToGlob*camToQuad*invCamMatrix*imgVec;
+        Eigen::Vector4f globCoord = quadToGlob*camToQuad*scaleUp*invCamMatrix*imgVec;
 
-        temp.position.x = globCoord[0];
-        temp.position.y = globCoord[1];
-        temp.position.z = globCoord[2];
+        temp.position.x = globCoord(0);
+        temp.position.y = globCoord(1);
+        temp.position.z = globCoord(2);
 
         msg.object_poses.push_back(temp);
     }
