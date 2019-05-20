@@ -19,6 +19,7 @@
 #define MAX_CONTOUR_POINTS 2500
 
 #define min(a,b) (a>b)?b:a
+#define sign(x) (x>0)?1:0 
 #define check(X) std::cout<<"check "<<X<<std::endl
 
 cv::Vec3b BLACK = (0,0,0);
@@ -46,8 +47,6 @@ nav_msgs::Odometry odom;
 cv::Mat intrinsic = cv::Mat_<double>(3,3);
 cv::Mat img_, undistImg_, markedImg_;
 
-
-
 struct bbox
 {
     int rangeX[2], rangeY[2];
@@ -59,6 +58,12 @@ struct bbox
     int contourY[MAX_CONTOUR_POINTS];
     int cornerX[4], cornerY[4];
 };
+
+// clean
+int sgnArea(double x1, double x2, double x3, double y1, double y2, double y3)
+{
+    return sign(x1*y2 + x2*y3 + x3*y1 - y1*x2 - y2*x3 - y3*x1);
+}
 
 void imageCallback(const sensor_msgs::Image msg)
 {

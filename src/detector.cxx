@@ -229,42 +229,43 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh, cv::Mat *
                     }
                 }
 
-                // fix horizontal case
-                int cMinX = width, cMinY = height, cMaxX = 0, cMaxY = 0;
-                int cMinXi = 0, cMinYi = 0, cMaxXi = 0, cMaxYi = 0;
-
                 for(int i=0; i<4; i++)
                 {
                     cX[i] = cX[i]+fsx;
                     cY[i] = cY[i]+fsy;
-                    
-                    if(cX[i]>cMaxX)
-                    {
-                        cMaxX = cX[i];
-                        cMaxXi = i;
-                    }
-                    if(cX[i]<cMinX)
-                    {
-                        cMinX = cX[i];
-                        cMinXi = i;
-                    }
-                    
-                    if(cY[i]>cMaxY)
-                    {
-                        cMaxY = cY[i];
-                        cMaxYi = i;
-                    }
-                    if(cY[i]<cMinY)
-                    {
-                        cMinY = cY[i];
-                        cMinYi = i;
-                    }                                        
                 }
 
-                Box.cornerX[0] = cMinX;      Box.cornerY[0] = cY[cMinXi];
-                Box.cornerX[1] = cX[cMaxYi]; Box.cornerY[1] = cMaxY;
-                Box.cornerX[2] = cMaxX;      Box.cornerY[2] = cY[cMaxXi];
-                Box.cornerX[3] = cX[cMinYi]; Box.cornerY[3] = cMinY;
+                bool sgn1 = sgnArea(cX[0], cX[1], cX[2], cY[0], cY[1], cY[2]);
+                bool sgn2 = sgnArea(cX[0], cX[2], cX[3], cY[0], cY[2], cY[3]);
+                bool sgn3 = sgnArea(cX[0], cX[1], cX[3], cY[0], cY[1], cY[3]);
+
+                if(sgn1 == sgn2)
+                {
+                    for (int i = 0; i < 4; i++)
+                    {
+                        Box.cornerX[i] = cX[i];
+                        Box.cornerY[i] = cY[i];
+                    }
+                }
+                else
+                {
+                    if(sgn2 ==  sgn3)
+                    {
+                        Box.cornerX[0] = cX[0]; Box.cornerY[0] = cY[0];
+                        Box.cornerX[1] = cX[3]; Box.cornerY[1] = cY[3];
+                        Box.cornerX[2] = cX[1]; Box.cornerY[2] = cY[1];
+                        Box.cornerX[3] = cX[2]; Box.cornerY[3] = cY[2];
+                    }
+                    else
+                    {
+                        Box.cornerX[0] = cX[0]; Box.cornerY[0] = cY[0];
+                        Box.cornerX[1] = cX[1]; Box.cornerY[1] = cY[1];
+                        Box.cornerX[2] = cX[3]; Box.cornerY[2] = cY[3];
+                        Box.cornerX[3] = cX[2]; Box.cornerY[3] = cY[2];
+                    }
+                    
+                }
+                
                 Box.contourSize = min(contour_index, MAX_CONTOUR_POINTS);
 
                 if(areaCheckFlag)
