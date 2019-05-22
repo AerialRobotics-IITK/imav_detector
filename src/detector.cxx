@@ -294,7 +294,7 @@ std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh, cv::Mat *
 
                 passed = (!eigenCheckFlag || eigenPassed) && (!diagCheckFlag || diagPassed) && (!areaCheckFlag || areaPassed);
                 if(passed)
-                {
+                {	
                     bboxes.push_back(Box);
 
                     for(int j=0; j<Box.contourSize; j++)
