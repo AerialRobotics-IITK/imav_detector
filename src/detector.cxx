@@ -398,13 +398,13 @@ int main(int argc, char **argv)
     std::vector<double> tempList;
 
     cv::Mat distCoeffs = cv::Mat_<double>(1,5);
-    nh.getParam("/detector/camera/distortion_coefficients", tempList);
+    nh.getParam("/detector/distortion_coefficients/data", tempList);
     for(int i=0; i<5; i++)
     {
         distCoeffs.at<double>(i) = tempList[i];
     }
 
-    nh.getParam("/detector/camera/intrinsic_parameters", tempList);
+    nh.getParam("/detector/camera_matrix/data", tempList);
     int tempIdx=0;
     for(int i=0; i<3; i++)
     {

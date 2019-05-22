@@ -16,6 +16,7 @@
     
   <node name="detector" pkg="detector" type="detector_node" output="screen">
     <rosparam file="$(find detector)/cfg/detector.yaml"/>
+    <rosparam file="$(env HOME)/.ros/camera_info/head_camera.yaml"/>
     <remap from="image" to="/threshold_image"/>
     <remap from="bounding_boxes" to="bounding_boxes"/>
   </node>
