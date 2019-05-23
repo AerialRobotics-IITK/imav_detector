@@ -419,19 +419,24 @@ int main(int argc, char **argv)
         while(imageID < 1) ros::spinOnce();
         cv::undistort(img_, undistImg_, intrinsic, distCoeffs);
         std::vector<struct bbox> objects = floodFill(&undistImg_, nh, &markedImg_);
-        detector::BBPoses pose_msg = findPoses(&objects, nh);
-        pose_msg.stamp = ros::Time::now();
-        pose_msg.imageID = imageID;
-        pose_pub.publish(pose_msg);
-
+        if(objects.size()>0)
+        {
+            detector::BBPoses pose_msg = findPoses(&objects, nh);
+            pose_msg.stamp = ros::Time::now();
+            pose_msg.imageID = imageID;
+            pose_pub.publish(pose_msg);
+        }
         if(debug)
         {   
             sensor_msgs::ImagePtr undist_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", undistImg_).toImageMsg();  
             undist_imgPub.publish(undist_msg);
-            detector::BBoxes msg = createMsg(&objects);
-            msg.stamp = ros::Time::now();
-            msg.imageID = imageID;
-            bbox_pub.publish(msg);
+            if(objects.size() > 0)
+            {    
+                detector::BBoxes msg = createMsg(&objects);
+                msg.stamp = ros::Time::now();
+                msg.imageID = imageID;
+                bbox_pub.publish(msg);
+            }
             sensor_msgs::ImagePtr marked_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", markedImg_).toImageMsg();
             marked_imgPub.publish(marked_msg);
         }
