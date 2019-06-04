@@ -1,4 +1,4 @@
-#include "detector.h"
+#include <detector/detector.h>
 
 std::vector<struct bbox> floodFill(cv::Mat *input, ros::NodeHandle nh, cv::Mat *output)
 {
