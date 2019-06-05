@@ -2,84 +2,32 @@
 
 import cv2
 import numpy as np
+import os
+import os.path as path
 
 proc = 0
 key = 0
 boxes = []
 rois = []
 
-def hsvToRGB(h,s,v):
-    r=g=b=0.0
-    h = h/60.0
-    s = s/255.0
-    v = v/255.0
-    c = v*s
-    x = c*(1.0-abs(h%2-1.0))
-    if(h>=0 and h<=1):
-        r = c
-        g = x
-    elif(h>1 and h<=2):
-        r = x
-        g = c
-    elif(h>2 and h<=3):
-        g = c
-        b = x
-    elif(h>3 and h<=4):
-        g = x
-        b = c
-    elif(h>4 and h<=5):
-        r = x
-        b = c
-    elif(h>5 and h<=6):
-        r = c
-        b = x
-    m = v - c
-    r = (r + m)*255.0
-    g = (g + m)*255.0
-    b = (b + m)*255.0
-    return int(r),int(g),int(b)
-
-def rgbToHSV(r,g,b):
-    h=s=v=0.0
-    min_ = min(r, min(g,b))
-    max_ = max(r, max(g,b))
-    v = max_
-    delta = max_ - min_
-    if max_ != 0 :
-        s = min(delta*255.0/max_, 255.0)
-    if r==max_:
-        h = 0.0 + (g-b)/delta
-    elif  g==max_:
-        h = 2.0 + (b-r)/delta
-    else:
-        h = 4.0 + (r-g)/delta
-    h = h*60.0
-    if h<0:
-        h = h + 360.0
-    return int(h),int(s),int(v)
-
-def findRanges(rois, key):
-    i = proc
-    print("Press r to stop calculating.")
-    print("Press n to move to the next saved region.")
-    print("Press s to save region values to file.")
-    while(i < (len(rois) - proc)):
-        cv2.imshow('Region', rois[i])
-        #calc and print here
-        if key == ord('r'):
-            print("Stopping after " + str(proc) + " images.")
-            return
-        if key == ord('n'):
-            print("Loading next region")
-            i = i + 1
-            continue
-        if key == ord('s'):
-            # save here
-            print("Saving to file.")
-    print("All regions done.")
-    return
+def calcHSV(frame):
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    h, s, v = cv2.split(hsv)
+    # std deviation non zero fix!
+    hZ = abs((h-np.mean(h))/np.std(h))
+    sZ = abs((s-np.mean(s))/np.std(s))
+    vZ = abs((v-np.mean(v))/np.std(v))
+    imZ = frame
+    imZ[hZ>1] = [255,255,255]
+    imZ[sZ>1] = [255,255,255]
+    imZ[vZ>1] = [255,255,255]
+    regionH = h[abs(hZ)<=1]
+    regionS = s[abs(sZ)<=1]
+    regionV = v[abs(vZ)<=1]
+    return [np.min(regionH),np.min(regionS),np.min(regionV)], [np.max(regionH),np.max(regionS),np.max(regionV)]
 
 def on_mouse(event, x, y, flags, params):
+    # handle bottom to top drag
     if event == cv2.EVENT_LBUTTONDOWN:
         print("Start: "+str(x)+", "+str(y))
         sbox = [x,y]
@@ -88,6 +36,9 @@ def on_mouse(event, x, y, flags, params):
         print("End: "+str(x)+", "+str(y))
         ebox = [x,y]
         boxes.append(ebox)
+        if boxes[-1] == boxes[-2] :
+            print("Click ignored.")
+            return
         crop = frame[boxes[-2][1]:boxes[-1][1], boxes[-2][0]:boxes[-1][0]]
         cv2.imshow('ROI', crop)
         print("Press w to save, x to discard.")
@@ -114,6 +65,8 @@ print("Press q to quit.")
 
 cv2.namedWindow('Image')
 stallImage = False
+minHSV = [-1,-1,-1]
+maxHSV = [-1,-1,-1]
 
 while(True):
 
@@ -137,22 +90,43 @@ while(True):
             break
         print("Calculating HSV ranges for saved ROIs.")
         i = proc
+        print("Press e to calculate.")
         print("Press r to stop calculating.")
         print("Press n to move to the next saved region.")
-        print("Press s to save region values to file.")
-        while(i < (len(rois) - proc)):
+        print("Press s to save current region values to file.")
+        while(i < len(rois)):
             cv2.imshow('Region', rois[i])
             key = cv2.waitKey(1)
+            if key == ord('e'):
+                cv2.destroyWindow('Region')
+                minHSV, maxHSV = calcHSV(rois[i])
+                print("Minimum H,S,V values for this region: ")
+                print(minHSV)
+                print("Maximum H,S,V values for this region: ")
+                print(maxHSV)
             if key == ord('r'):
-                print("Stopping after " + str(proc) + " images.")
+                cv2.destroyWindow('Region')
+                print("Stopping after " + str(proc) + " regions.")
                 break
             if key == ord('n'):
+                cv2.destroyWindow('Region')
                 print("Loading next region")
                 i = i + 1
                 proc = i
                 continue
             if key == ord('s'):
+                cv2.destroyWindow('Region')
                 print("Saving to file.")
+                filepath = path.join(path.join(os.getcwd(),'etc'),'hsv.bin')
+                data = [minHSV, maxHSV]
+                with open(filepath, 'ab') as f:
+                    np.savetxt(f, data, "%d")
+                    f.write("\n")
+                    f.close()
+                print("Loading next region")
+                i = i + 1
+                proc = i
+                continue
         print("All regions done.")
         cv2.destroyWindow('Region')
 
