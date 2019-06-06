@@ -22,3 +22,30 @@ expectedSizes:
   yellow: 0
   blue: 0 
   orange: 0
+
+# yellow
+yellow:
+  h_min: 20
+  h_max: 40
+  s_min: 35                    
+  s_max: 255
+  v_min: 100
+  v_max: 255
+
+#red
+red:
+  h_min: 6
+  h_max: 15
+  s_min: 164
+  s_max: 255
+  v_min: 65
+  v_max: 119
+
+#blue
+blue:
+  h_min: 60
+  h_max: 80
+  s_min: 35
+  s_max: 255
+  v_min: 100
+  v_max: 255
