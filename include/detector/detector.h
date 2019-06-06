@@ -27,7 +27,6 @@ cv::Vec3b RED = (255,0,0);
 cv::Vec3b BLUE = (0,0,255);
 cv::Vec3b GREEN = (0,255,0);
 
-// int whiteType = -10;
 int redType = -10, yellowType = -20, blueType = -30;
 int borderType = (int)10E4;
 int contourType = (int)10E6;

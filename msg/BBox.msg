@@ -1,6 +1,7 @@
 int32 boxID
 int32 pixSize
 int32 contourSize
+string colour
 float32 diagIndex
 float32 areaIndex
 float32 eigenIndex

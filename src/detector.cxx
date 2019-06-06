@@ -35,11 +35,6 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
     int* buffer = (int*)calloc(res, sizeof(int));
     for(int i=0; i<res; i++)
     {
-        /*if(input->at<cv::Vec3b>(cv::Point(i%width, i/width))!=BLACK)
-        {
-            buffer[i]=whiteType;
-        }*/
-
         buffer[i] = getObjectType(input->at<cv::Vec3b>(cv::Point(i%width, i/width)));
     }
 
@@ -96,7 +91,6 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
                         nPix++;
                     }
 
-                    // if(buffer[pixPos]==whiteType)
                     if(buffer[pixPos]==pixType)
                     {
                         stack[queueEnd++] = pixPos;
@@ -297,7 +291,14 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
                         pixPos = contour[j];
                         buffer[pixPos] = contourType + numBoxes;
                         // does not show colors other than blue
-                        if(debug) output->at<cv::Vec3b>(cv::Point(pixPos%width, pixPos/width)) = BLUE;
+                        if(debug)
+                        {
+                            for(int i=0; i<4; i++)
+                            {
+                                int pos = pixPos + expand[i];
+                                output->at<cv::Vec3b>(cv::Point(pos%width, pos/width)) = BLUE;
+                            }
+                        }
                     }
                 }
                 else
@@ -343,9 +344,9 @@ detector::BBoxes createMsg(std::vector<struct bbox> *ptr)
         temp.contourSize = box->contourSize;       
         temp.full = !box->warning;
 
-        if(box->type = redType) temp.colour = "red";
-        else if(box->type = yellowType) temp.colour = "yellow";
-        else if(box->type = blueType) temp.colour = "blue";
+        if(box->type == redType) temp.colour = "red";
+        else if(box->type == yellowType) temp.colour = "yellow";
+        else if(box->type == blueType) temp.colour = "blue";
         else temp.colour = "wrong";
 
         for(int j=0; j<4; j++)
