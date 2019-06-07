@@ -402,8 +402,9 @@ int main(int argc, char **argv)
     {
         while(imageID < 1) ros::spinOnce();
 
-        cv::undistort(img_, undistImg_, intrinsic, distCoeffs);
-        // undistImg_ = img_;
+        if(!isRectified) cv::undistort(img_, undistImg_, intrinsic, distCoeffs);
+        else undistImg_ = img_;
+        
         std::vector<struct bbox> objects = floodFill(&undistImg_, &markedImg_);
 
         if(objects.size()>0)

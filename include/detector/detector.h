@@ -36,6 +36,7 @@ bool diagCheckFlag = true;
 bool areaCheckFlag = true;
 bool debug = true;
 bool verbose = false;
+bool isRectified = false;
 
 int minSize = 4000;
 float maxAreaIndex = 1;
@@ -112,6 +113,7 @@ void loadParams(ros::NodeHandle nh)
     nh.getParam("/detector/camera/translation/x", tCamX);
     nh.getParam("/detector/camera/translation/y", tCamY);
     nh.getParam("/detector/camera/translation/z", tCamZ);
+    nh.getParam("/detector/camera/is_rectified", isRectified);
 
     nh.getParam("/detector/yellow/h_max", YHMax);
     nh.getParam("/detector/yellow/h_min", YHMin);
