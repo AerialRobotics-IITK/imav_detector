@@ -2,11 +2,8 @@
 
 int getObjectType(cv::Vec3b pixel)
 {
-    cv::Mat pix(1,1,CV_8UC3);
-    cv::Mat hsvPix(1,1,CV_8UC3);
-    pix.at<cv::Vec3b>(0,0) = pixel;
-    cv::cvtColor(pix, hsvPix, cv::COLOR_BGR2HSV);
-    int h=hsvPix.at<cv::Vec3b>(0,0)[0], s=hsvPix.at<cv::Vec3b>(0,0)[1], v=hsvPix.at<cv::Vec3b>(0,0)[2];
+    // cv::cvtColor(pix, hsvPix, cv::COLOR_BGR2HSV);
+    int h=pixel[0], s=pixel[1], v=pixel[2];
     if(h>=RHMin && h<=RHMax && s>=RSMin && s<=RSMax && v>=RVMin && v<=RVMax) return redType;
     else if(h>=YHMin && h<=YHMax && s>=YSMin && s<=YSMax && v>=YVMin && v<=YVMax) return yellowType;
     else if(h>=BHMin && h<=BHMax && s>=BSMin && s<=BSMax && v>=BVMin && v<=BVMax) return blueType;
@@ -17,6 +14,8 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
 {
     std::vector<struct bbox> bboxes;
     if(debug) *output = *input;
+    cv::Mat hsv(input->cols, input->rows, CV_8UC3);
+    cv::cvtColor(*input, hsv, cv::COLOR_BGR2HSV);
 
     int width = input->cols;
     int height = input->rows;
@@ -35,7 +34,7 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
     int* buffer = (int*)calloc(res, sizeof(int));
     for(int i=0; i<res; i++)
     {
-        buffer[i] = getObjectType(input->at<cv::Vec3b>(cv::Point(i%width, i/width)));
+        buffer[i] = getObjectType(hsv.at<cv::Vec3b>(cv::Point(i%width, i/width)));
     }
 
     int topPix = 0;
@@ -396,7 +395,7 @@ int main(int argc, char **argv)
     image_transport::Publisher undist_imgPub = it.advertise("undist_image",10);
     image_transport::Publisher marked_imgPub = it.advertise("marked_image", 10);
     
-    ros::Rate loop_rate(30);
+    ros::Rate loop_rate(10);
     loadParams(nh);
 
     while (nh.ok())
@@ -404,6 +403,7 @@ int main(int argc, char **argv)
         while(imageID < 1) ros::spinOnce();
 
         cv::undistort(img_, undistImg_, intrinsic, distCoeffs);
+        // undistImg_ = img_;
         std::vector<struct bbox> objects = floodFill(&undistImg_, &markedImg_);
 
         if(objects.size()>0)

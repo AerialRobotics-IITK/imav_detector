@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
   <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="log" >
-    <param name="video_device" value="/dev/video1" />
+    <param name="video_device" value="/dev/video0" />
     <param name="image_width" value="640" />
     <param name="image_height" value="480" />
     <param name="pixel_format" value="yuyv" />
@@ -13,6 +13,7 @@
     <rosparam file="$(find detector)/cfg/detector.yaml"/>
     <rosparam file="$(env HOME)/.ros/camera_info/head_camera.yaml"/>
     <remap from="image" to="/usb_cam/image_raw"/>
+    <remap from="odometry" to="odometry"/>
     <remap from="bounding_boxes" to="bounding_boxes"/>
     <remap from="object_poses" to="object_poses"/>
     <remap from="undist_image" to="undist_image"/>
