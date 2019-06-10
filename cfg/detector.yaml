@@ -3,7 +3,7 @@ camera:
   # enter coordinates of camera origin with respect to quad origin
   translation: [0,0,0]
   # enter rotation matrix for quad to camera frame row-wise
-  rotation: [1,0,0,0,-1,0,0,0,-1]
+  rotation: [0,-1,0,-1,0,0,0,0,-1]
 
 box: 
   minSize: 2000
