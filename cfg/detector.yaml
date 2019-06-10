@@ -1,9 +1,9 @@
 camera: 
   is_rectified: false
-  translation:
-    x: 0
-    y: 0
-    z: 0
+  # enter coordinates of camera origin with respect to quad origin
+  translation: [0,0,0]
+  # enter rotation matrix for quad to camera frame row-wise
+  rotation: [1,0,0,0,-1,0,0,0,-1]
 
 box: 
   minSize: 2000
@@ -17,12 +17,6 @@ flags:
   eigenCheck: true
   debug: true
   verbose: false
-
-expectedSizes: 
-  red: 0
-  yellow: 0
-  blue: 0 
-  orange: 0
 
 # yellow
 yellow:
@@ -50,3 +44,9 @@ blue:
   s_max: 255
   v_min: 100
   v_max: 255
+
+expectedSizes: 
+  red: 0
+  yellow: 0
+  blue: 0 
+  orange: 0

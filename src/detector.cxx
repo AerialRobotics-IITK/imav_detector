@@ -2,7 +2,6 @@
 
 int getObjectType(cv::Vec3b pixel)
 {
-    // cv::cvtColor(pix, hsvPix, cv::COLOR_BGR2HSV);
     int h=pixel[0], s=pixel[1], v=pixel[2];
     if(h>=RHMin && h<=RHMax && s>=RSMin && s<=RSMax && v>=RVMin && v<=RVMax) return redType;
     else if(h>=YHMin && h<=YHMax && s>=YSMin && s<=YSMax && v>=YVMin && v<=YVMax) return yellowType;

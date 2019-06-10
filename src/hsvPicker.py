@@ -21,7 +21,7 @@ class HSVPicker:
         print("Press p to pause/play the image stream.")
         print("Press c to calculate the HSV ranges for stored regions.")
         print("Press q to quit.")
-        self.sub = rospy.Subscriber("/usb_cam/image_raw", Image, self.callback, queue_size=1)
+        self.sub = rospy.Subscriber("colour_image", Image, self.callback, queue_size=1)
         self.bridge = CvBridge()
         self.key = 0
         self.proc = 0
@@ -35,10 +35,21 @@ class HSVPicker:
     def calcHSV(self, frame):
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         h, s, v = cv2.split(hsv)
-        # std deviation non zero fix!
-        hZ = abs((h-np.mean(h))/np.std(h))
-        sZ = abs((s-np.mean(s))/np.std(s))
-        vZ = abs((v-np.mean(v))/np.std(v))
+        stdH = np.std(h) 
+        stdS = np.std(s)
+        stdV = np.std(v)
+        if stdH!=0:
+            hZ = abs((h-np.mean(h))/stdH)
+        else:
+            hZ = 0
+        if stdS!=0:
+            sZ = abs((s-np.mean(s))/stdS)
+        else:
+            sZ = 0
+        if stdV!=0:
+            vZ = abs((v-np.mean(v))/stdV)
+        else:
+            vZ = 0
         imZ = frame
         imZ[hZ>self.sigma] = [255,255,255]
         imZ[sZ>self.sigma] = [255,255,255]
@@ -47,9 +58,9 @@ class HSVPicker:
         regionS = s[abs(sZ)<=self.sigma]
         regionV = v[abs(vZ)<=self.sigma]
         return [np.min(regionH),np.min(regionS),np.min(regionV)], [np.max(regionH),np.max(regionS),np.max(regionV)]
+            
 
     def on_mouse(self, event, x, y, flags, param):
-        # handle bottom to top drag
         if event == cv2.EVENT_LBUTTONDOWN:
             print("Start: "+str(x)+", "+str(y))
             sbox = [x,y]
@@ -61,7 +72,11 @@ class HSVPicker:
             if self.boxes[-1] == self.boxes[-2] :
                 print("Click ignored.")
                 return
-            crop = self.frame[self.boxes[-2][1]:self.boxes[-1][1], self.boxes[-2][0]:self.boxes[-1][0]]
+            x1 = self.boxes[-2][1]
+            y1 = self.boxes[-2][0]
+            x2 = self.boxes[-1][1]
+            y2 = self.boxes[-1][0]
+            crop = self.frame[min(x1,x2):max(x1,x2), min(y1,y2):max(y1,y2)]                           
             cv2.imshow('ROI', crop)
             print("Press w to save, x to discard.")
             done = False
@@ -150,7 +165,6 @@ def main(args):
     rospy.init_node('picker', anonymous=True)
     while not rospy.is_shutdown():
         rospy.spin()
-    #cap.release()
     cv2.destroyAllWindows()
 
 if __name__ == '__main__':

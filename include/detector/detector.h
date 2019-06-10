@@ -58,7 +58,8 @@ cv::Mat intrinsic = cv::Mat_<double>(3,3);
 cv::Mat distCoeffs = cv::Mat_<double>(1,5);
 cv::Mat img_, undistImg_, markedImg_;
 
-float tCamX = 0, tCamY = 0, tCamZ = 0;
+Eigen::Matrix3f camMatrix, invCamMatrix, camToQuad, quadToCam;
+Eigen::Vector3f tCam;
 
 struct bbox
 {
@@ -81,15 +82,16 @@ int sgnArea(double x1, double x2, double x3, double y1, double y2, double y3)
 void loadParams(ros::NodeHandle nh)
 {
     std::vector<double> tempList;
-    
-    nh.getParam("/detector/distortion_coefficients/data", tempList);
+    int tempIdx=0;
+
+    nh.getParam("detector/distortion_coefficients/data", tempList);
     for(int i=0; i<5; i++)
     {
         distCoeffs.at<double>(i) = tempList[i];
     }
    
-    nh.getParam("/detector/camera_matrix/data", tempList);
-    int tempIdx=0;
+    nh.getParam("detector/camera_matrix/data", tempList);
+    tempIdx=0;
     for(int i=0; i<3; i++)
     {
         for(int j=0; j<3; j++)
@@ -98,45 +100,70 @@ void loadParams(ros::NodeHandle nh)
         }
     }
 
-    nh.getParam("/detector/flags/diagCheck", diagCheckFlag);
-    nh.getParam("/detector/flags/eigenCheck", eigenCheckFlag);
-    nh.getParam("/detector/flags/areaCheck", areaCheckFlag);
+    nh.getParam("detector/flags/diagCheck", diagCheckFlag);
+    nh.getParam("detector/flags/eigenCheck", eigenCheckFlag);
+    nh.getParam("detector/flags/areaCheck", areaCheckFlag);
 
-    nh.getParam("/detector/flags/debug", debug);
-    nh.getParam("/detector/flags/verbose", verbose);
+    nh.getParam("detector/flags/debug", debug);
+    nh.getParam("detector/flags/verbose", verbose);
 
-    nh.getParam("/detector/box/minSize", minSize);
-    nh.getParam("/detector/box/maxAreaIndex", maxAreaIndex);
-    nh.getParam("/detector/box/maxEigenIndex", maxEigenIndex);
-    nh.getParam("/detector/box/maxDiagIndex", maxDiagIndex);
+    nh.getParam("detector/box/minSize", minSize);
+    nh.getParam("detector/box/maxAreaIndex", maxAreaIndex);
+    nh.getParam("detector/box/maxEigenIndex", maxEigenIndex);
+    nh.getParam("detector/box/maxDiagIndex", maxDiagIndex);
 
-    nh.getParam("/detector/camera/translation/x", tCamX);
-    nh.getParam("/detector/camera/translation/y", tCamY);
-    nh.getParam("/detector/camera/translation/z", tCamZ);
-    nh.getParam("/detector/camera/is_rectified", isRectified);
+    nh.getParam("detector/camera/translation", tempList);
+    for (int i = 0; i < 3; i++)
+    {
+        tCam(i) = tempList[i];
+    }
 
-    nh.getParam("/detector/yellow/h_max", YHMax);
-    nh.getParam("/detector/yellow/h_min", YHMin);
-    nh.getParam("/detector/yellow/s_max", YSMax);
-    nh.getParam("/detector/yellow/s_min", YSMin);
-    nh.getParam("/detector/yellow/v_max", YVMax);
-    nh.getParam("/detector/yellow/v_min", YVMin);
+    nh.getParam("detector/camera/rotation", tempList);
+    tempIdx = 0;
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 3; j++)
+        {
+            quadToCam(i,j) = tempList[tempIdx++];
+        }
+    }
 
-    nh.getParam("/detector/red/h_max", RHMax);
-    nh.getParam("/detector/red/h_min", RHMin);
-    nh.getParam("/detector/red/s_max", RSMax);
-    nh.getParam("/detector/red/s_min", RSMin);
-    nh.getParam("/detector/red/v_max", RVMax);
-    nh.getParam("/detector/red/v_min", RVMin);
+    nh.getParam("detector/camera/is_rectified", isRectified);
 
-    nh.getParam("/detector/blue/h_max", BHMax);
-    nh.getParam("/detector/blue/h_min", BHMin);
-    nh.getParam("/detector/blue/s_max", BSMax);
-    nh.getParam("/detector/blue/s_min", BSMin);
-    nh.getParam("/detector/blue/v_max", BVMax);
-    nh.getParam("/detector/blue/v_min", BVMin);
+    nh.getParam("detector/yellow/h_max", YHMax);
+    nh.getParam("detector/yellow/h_min", YHMin);
+    nh.getParam("detector/yellow/s_max", YSMax);
+    nh.getParam("detector/yellow/s_min", YSMin);
+    nh.getParam("detector/yellow/v_max", YVMax);
+    nh.getParam("detector/yellow/v_min", YVMin);
+
+    nh.getParam("detector/red/h_max", RHMax);
+    nh.getParam("detector/red/h_min", RHMin);
+    nh.getParam("detector/red/s_max", RSMax);
+    nh.getParam("detector/red/s_min", RSMin);
+    nh.getParam("detector/red/v_max", RVMax);
+    nh.getParam("detector/red/v_min", RVMin);
+
+    nh.getParam("detector/blue/h_max", BHMax);
+    nh.getParam("detector/blue/h_min", BHMin);
+    nh.getParam("detector/blue/s_max", BSMax);
+    nh.getParam("detector/blue/s_min", BSMin);
+    nh.getParam("detector/blue/v_max", BVMax);
+    nh.getParam("detector/blue/v_min", BVMin);
+
+    for(int i=0; i<3; i++)
+    {
+        for(int j=0; j<3; j++)
+        {
+            camMatrix(i,j) = intrinsic.at<double>(i,j);
+        }
+    }
+
+    invCamMatrix = camMatrix.inverse();
+    camToQuad = quadToCam.inverse();
 
     std::cout << "Parameters Loaded." << std::endl;
+
     return;
 }
 
@@ -165,51 +192,25 @@ void odomCallback(const nav_msgs::Odometry msg)
     return;
 }
 
-// imageID may need to be longer dtype 
 detector::BBPoses findPoses(std::vector<struct bbox> *ptr)
 {
     detector::BBPoses msg;
     struct bbox *box;
-    
-    Eigen::Matrix4f camMatrix, quadToCam, globToQuad;
-    Eigen::Matrix4f invCamMatrix, camToQuad, quadToGlob, scaleUp;
+
+    Eigen::Matrix3f scaleUp, quadToGlob;
 
     tf::Quaternion q1(odom.pose.pose.orientation.x, odom.pose.pose.orientation.y, odom.pose.pose.orientation.z, odom.pose.pose.orientation.w);
     Eigen::Quaternionf quat = Eigen::Quaternionf(q1.w(), q1.x(), q1.y(), q1.z());
-    Eigen::Matrix3f rotQuadtoCam = quat.toRotationMatrix();
+    quadToGlob = quat.toRotationMatrix();
 
-    for(int i=0; i<4; i++)
+    for (int i=0; i<3; i++)
     {
-        for(int j=0; j<4; j++)
+        for (int j=0; j<3; j++)
         {
-            if(i==3) 
-            {
-                if(j==3) camMatrix(i,j) = quadToCam(i, j) = globToQuad(i, j) = scaleUp(i, j) = 1;
-                else camMatrix(i, j) = quadToCam(i, j) = globToQuad(i, j) = scaleUp(i,j) = 0;
-            }
-            else if(j==3)
-            {
-                camMatrix(i, j) = scaleUp(i, j) = 0;
-                switch(i)
-                {
-                    case 0: quadToCam(i, j) = tCamX; globToQuad(i, j) = -odom.pose.pose.position.x; break;
-                    case 1: quadToCam(i, j) = tCamY; globToQuad(i, j) = -odom.pose.pose.position.y; break;
-                    case 2: quadToCam(i, j) = tCamZ; globToQuad(i, j) = -odom.pose.pose.position.z; break;
-                }
-            }
-            else
-            {
-                camMatrix(i, j) = intrinsic.at<double>(i,j);
-                globToQuad(i, j) = rotQuadtoCam(i, j);
-                quadToCam(i, j) = ((i+j)%3 == 1) ? -1 : 0;
-                scaleUp(i, j) = (i==j) ? odom.pose.pose.position.z : 0;
-            }
+            if(i==j) scaleUp(i,j) = odom.pose.pose.position.z;
+            else scaleUp(i,j) = 0;
         }
     }
-
-    invCamMatrix = camMatrix.inverse();
-    camToQuad = quadToCam.inverse();
-    quadToGlob = globToQuad.inverse();
 
     for(int i=0; i<ptr->size(); i++)
     {
@@ -218,12 +219,14 @@ detector::BBPoses findPoses(std::vector<struct bbox> *ptr)
         box = &(ptr->at(i));
         temp.boxID = box->id;
 
-        Eigen::Vector4f imgVec(box->x_mean,box->y_mean,1,1);
-        Eigen::Vector4f globCoord = quadToGlob*camToQuad*scaleUp*invCamMatrix*imgVec;
-
-        temp.position.x = globCoord(0);
-        temp.position.y = globCoord(1);
-        temp.position.z = globCoord(2);
+        Eigen::Vector3f imgVec(box->x_mean,box->y_mean,1);
+        Eigen::Vector3f quadCoord = camToQuad*scaleUp*invCamMatrix*imgVec;
+        quadCoord = quadCoord + tCam;
+        
+        Eigen::Vector3f globCoord = quadToGlob*quadCoord;
+        temp.position.x = globCoord(0) + odom.pose.pose.position.x;
+        temp.position.y = globCoord(1) + odom.pose.pose.position.y;
+        temp.position.z = globCoord(2) + odom.pose.pose.position.z;
 
         msg.object_poses.push_back(temp);
     }
