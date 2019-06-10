@@ -2,19 +2,19 @@
 <launch>
 <arg name="mav_name" default="spedix"/>
 <group ns="$(arg mav_name)">
-  <node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="log" >
+  <!-- node name="usb_cam" pkg="usb_cam" type="usb_cam_node" output="log" >
     <param name="video_device" value="/dev/video0" />
     <param name="image_width" value="640" />
     <param name="image_height" value="480" />
     <param name="pixel_format" value="yuyv" />
     <param name="camera_frame_id" value="usb_cam" />
     <param name="io_method" value="mmap"/>
-  </node>
+  </node -->
     
   <node name="detector" pkg="detector" type="detector_node" output="screen">
     <rosparam file="$(find detector)/cfg/detector.yaml"/>
-    <rosparam file="$(env HOME)/.ros/camera_info/head_camera.yaml"/>
-    <remap from="image" to="usb_cam/image_raw"/>
+    <rosparam file="$(env HOME)/.ros/camera_info/mv.yaml"/>
+    <remap from="image" to="/mv/image_raw"/>
     <remap from="odometry" to="odom"/>
     <remap from="bounding_boxes" to="bounding_boxes"/>
     <remap from="object_poses" to="object_poses"/>

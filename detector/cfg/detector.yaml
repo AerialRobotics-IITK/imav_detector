@@ -1,20 +1,21 @@
-camera: 
+camera:
   is_rectified: false
   # enter coordinates of camera origin with respect to quad origin
   translation: [0,0,0]
   # enter rotation matrix for quad to camera frame row-wise
   rotation: [0,-1,0,-1,0,0,0,0,-1]
 
-box: 
+box:
   minSize: 2000
   maxAreaIndex: 0.2
   maxEigenIndex: 1.069
   maxDiagIndex: 75
 
-flags: 
+flags:
   areaCheck: true
   diagCheck: true
   eigenCheck: true
+  sizeCheck: true
   debug: true
   verbose: false
 
@@ -22,7 +23,7 @@ flags:
 yellow:
   h_min: 20
   h_max: 40
-  s_min: 35                    
+  s_min: 100
   s_max: 255
   v_min: 100
   v_max: 255
@@ -45,8 +46,10 @@ blue:
   v_min: 100
   v_max: 255
 
-expectedSizes: 
+sizes:
+  #enter object area in sq.m.
   red: 0
-  yellow: 0
-  blue: 0 
-  orange: 0
+  blue: 0
+  yellow: 0.609
+  #enter size tolerance in sq.m.
+  tolerance: 0.0025

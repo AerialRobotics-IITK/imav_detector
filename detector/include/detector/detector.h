@@ -6,10 +6,10 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <sensor_msgs/Image.h>
 #include <cv_bridge/cv_bridge.h>
-#include <detector/BBoxes.h>
-#include <detector/BBox.h>
-#include <detector/BBPose.h>
-#include <detector/BBPoses.h>
+#include <detector_msgs/BBoxes.h>
+#include <detector_msgs/BBox.h>
+#include <detector_msgs/BBPose.h>
+#include <detector_msgs/BBPoses.h>
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -27,13 +27,15 @@ cv::Vec3b RED = (255,0,0);
 cv::Vec3b BLUE = (0,0,255);
 cv::Vec3b GREEN = (0,255,0);
 
-int redType = -10, yellowType = -20, blueType = -30;
-int borderType = (int)10E4;
-int contourType = (int)10E6;
+const int redType = -10, yellowType = -20, blueType = -30;
+const int borderType = (int)10E4;
+const int contourType = (int)10E6;
 
 bool eigenCheckFlag = true;
 bool diagCheckFlag = true;
 bool areaCheckFlag = true;
+bool sizeCheckFlag = true;
+
 bool debug = true;
 bool verbose = false;
 bool isRectified = false;
@@ -46,11 +48,12 @@ float maxEigenIndex = 1.07;
 bool eigenPassed = false;
 bool diagPassed = false;
 bool areaPassed = false;
+bool sizePassed = false;
 bool passed = false;
 
-int YHMax = 20  ,YHMin = 40    ,YSMax = 255, YSMin = 100, YVMax = 255, YVMin = 100;
-int RHMax = 0   ,RHMin = 20    ,RSMax = 255, RSMin = 100, RVMax = 255, RVMin = 100;
-int BHMax = 120 ,BHMin = 100   ,BSMax = 255, BSMin = 100, BVMax = 255, BVMin = 100;
+int YHMax = 20 , YHMin = 40 , YSMax = 255, YSMin = 100, YVMax = 255, YVMin = 100;
+int RHMax = 0  , RHMin = 20 , RSMax = 255, RSMin = 100, RVMax = 255, RVMin = 100;
+int BHMax = 120, BHMin = 100, BSMax = 255, BSMin = 100, BVMax = 255, BVMin = 100;
 
 int imageID = 0;
 nav_msgs::Odometry odom;
@@ -60,6 +63,8 @@ cv::Mat img_, undistImg_, markedImg_;
 
 Eigen::Matrix3f camMatrix, invCamMatrix, camToQuad, quadToCam;
 Eigen::Vector3f tCam;
+
+float redSize, yellowSize, blueSize, delSize;
 
 struct bbox
 {
@@ -103,6 +108,7 @@ void loadParams(ros::NodeHandle nh)
     nh.getParam("detector/flags/diagCheck", diagCheckFlag);
     nh.getParam("detector/flags/eigenCheck", eigenCheckFlag);
     nh.getParam("detector/flags/areaCheck", areaCheckFlag);
+    nh.getParam("detector/flags/sizeCheck", sizeCheckFlag);
 
     nh.getParam("detector/flags/debug", debug);
     nh.getParam("detector/flags/verbose", verbose);
@@ -151,6 +157,11 @@ void loadParams(ros::NodeHandle nh)
     nh.getParam("detector/blue/v_max", BVMax);
     nh.getParam("detector/blue/v_min", BVMin);
 
+    nh.getParam("detector/sizes/red", redSize);
+    nh.getParam("detector/sizes/blue", blueSize);
+    nh.getParam("detector/sizes/yellow", yellowSize);
+    nh.getParam("detector/sizes/tolerance", delSize);
+
     for(int i=0; i<3; i++)
     {
         for(int j=0; j<3; j++)
@@ -192,9 +203,9 @@ void odomCallback(const nav_msgs::Odometry msg)
     return;
 }
 
-detector::BBPoses findPoses(std::vector<struct bbox> *ptr)
+detector_msgs::BBPoses findPoses(std::vector<struct bbox> *ptr)
 {
-    detector::BBPoses msg;
+    detector_msgs::BBPoses msg;
     struct bbox *box;
 
     Eigen::Matrix3f scaleUp, quadToGlob;
@@ -214,21 +225,62 @@ detector::BBPoses findPoses(std::vector<struct bbox> *ptr)
 
     for(int i=0; i<ptr->size(); i++)
     {
-        detector::BBPose temp;
-        
         box = &(ptr->at(i));
-        temp.boxID = box->id;
 
-        Eigen::Vector3f imgVec(box->x_mean,box->y_mean,1);
-        Eigen::Vector3f quadCoord = camToQuad*scaleUp*invCamMatrix*imgVec;
-        quadCoord = quadCoord + tCam;
+        if(sizeCheckFlag)
+        {
+            float area = 0;
+            Eigen::MatrixXf globCorners(4,2);
+            for(int i=0; i<4; i++)
+            {
+                Eigen::Vector3f imgVec(box->cornerX[i],box->cornerY[i],1);
+                Eigen::Vector3f quadCoord = (camToQuad*scaleUp*invCamMatrix*imgVec) + tCam;
+
+                Eigen::Vector3f globCoord = quadToGlob*quadCoord;
+                globCorners(i,0) = globCoord(0) + odom.pose.pose.position.x;
+                globCorners(i,1) = globCoord(1) + odom.pose.pose.position.y;
+            }
+
+            for(int i=0; i<4; i++)
+            {
+                area += globCorners(i,0)*globCorners((i+1)%4,1) - globCorners(i,1)*globCorners((i+1)%4,0);
+            }
+            area = (float)fabs(area/2);
+
+            switch(box->type)
+            {
+                case redType: sizePassed = (fabs(area-redSize)<=delSize); break;
+                case yellowType: sizePassed = (fabs(area-yellowSize)<=delSize); break;
+                case blueType: sizePassed = (fabs(area-blueSize)<=delSize); break;
+            }
+        }
         
-        Eigen::Vector3f globCoord = quadToGlob*quadCoord;
-        temp.position.x = globCoord(0) + odom.pose.pose.position.x;
-        temp.position.y = globCoord(1) + odom.pose.pose.position.y;
-        temp.position.z = globCoord(2) + odom.pose.pose.position.z;
+        if(!sizeCheckFlag || sizePassed)
+        { 
+            detector_msgs::BBPose temp; 
+            temp.boxID = box->id;
 
-        msg.object_poses.push_back(temp);
+            if(sizeCheckFlag)
+            {
+                temp.area = area;
+                switch(box->type)
+                {
+                    case redType: temp.colour = 'red'; break;
+                    case yellowType: temp.colour = 'yellow'; break;
+                    case blueType: temp.colour = 'blue'; break;
+                }
+            }
+
+            Eigen::Vector3f imgVec(box->x_mean,box->y_mean,1);
+            Eigen::Vector3f quadCoord = (camToQuad*scaleUp*invCamMatrix*imgVec) + tCam;
+
+            Eigen::Vector3f globCoord = quadToGlob*quadCoord;
+            temp.position.x = globCoord(0) + odom.pose.pose.position.x;
+            temp.position.y = globCoord(1) + odom.pose.pose.position.y;
+            temp.position.z = globCoord(2) + odom.pose.pose.position.z;
+
+            msg.object_poses.push_back(temp);
+        }
     }
 
     return msg;

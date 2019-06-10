@@ -11,7 +11,7 @@
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->
-  <!-- Commonly used license strings: -->
+  <!-- Commonly used license stings: -->
   <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
   <license>TODO</license>
 
@@ -31,5 +31,6 @@
   <depend>eigen_conversions</depend>
   <depend>tf</depend>
   <depend>tf_conversions</depend>
-  
+  <depend>detector_msgs</depend>
+
 </package>
