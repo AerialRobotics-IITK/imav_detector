@@ -399,7 +399,7 @@ int main(int argc, char **argv)
 
     while (nh.ok())
     {
-        while(imageID < 1) ros::spinOnce();
+        while(imageID < 1 || odom.pose.pose.position.z == 0) ros::spinOnce();
 
         if(!isRectified) cv::undistort(img_, undistImg_, intrinsic, distCoeffs);
         else undistImg_ = img_;

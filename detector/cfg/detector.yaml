@@ -15,17 +15,17 @@ flags:
   areaCheck: true
   diagCheck: true
   eigenCheck: true
-  sizeCheck: true
+  sizeCheck: false
   debug: true
   verbose: false
 
 # yellow
 yellow:
-  h_min: 20
-  h_max: 40
-  s_min: 100
+  h_min: 32
+  h_max: 41
+  s_min: 130
   s_max: 255
-  v_min: 100
+  v_min: 130
   v_max: 255
 
 #red
@@ -53,3 +53,5 @@ sizes:
   yellow: 0.609
   #enter size tolerance in sq.m.
   tolerance: 0.0025
+  #height in metres
+  minHeight: 3.000

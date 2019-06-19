@@ -27,9 +27,9 @@ cv::Vec3b RED = (255,0,0);
 cv::Vec3b BLUE = (0,0,255);
 cv::Vec3b GREEN = (0,255,0);
 
-const int redType = -10, yellowType = -20, blueType = -30;
-const int borderType = (int)10E4;
-const int contourType = (int)10E6;
+int redType = -10, yellowType = -20, blueType = -30;
+int borderType = (int)10E4;
+int contourType = (int)10E6;
 
 bool eigenCheckFlag = true;
 bool diagCheckFlag = true;
@@ -44,6 +44,7 @@ int minSize = 4000;
 float maxAreaIndex = 1;
 float maxDiagIndex = 100;
 float maxEigenIndex = 1.07;
+float minSizeHeight = 3.000;
 
 bool eigenPassed = false;
 bool diagPassed = false;
@@ -161,6 +162,7 @@ void loadParams(ros::NodeHandle nh)
     nh.getParam("detector/sizes/blue", blueSize);
     nh.getParam("detector/sizes/yellow", yellowSize);
     nh.getParam("detector/sizes/tolerance", delSize);
+    nh.getParam("detector/sizes/minHeight", minSizeHeight);
 
     for(int i=0; i<3; i++)
     {
@@ -226,32 +228,37 @@ detector_msgs::BBPoses findPoses(std::vector<struct bbox> *ptr)
     for(int i=0; i<ptr->size(); i++)
     {
         box = &(ptr->at(i));
+        float area = 0;
 
         if(sizeCheckFlag)
         {
-            float area = 0;
-            Eigen::MatrixXf globCorners(4,2);
-            for(int i=0; i<4; i++)
+            if(odom.pose.pose.position.z < minSizeHeight)
             {
-                Eigen::Vector3f imgVec(box->cornerX[i],box->cornerY[i],1);
-                Eigen::Vector3f quadCoord = (camToQuad*scaleUp*invCamMatrix*imgVec) + tCam;
-
-                Eigen::Vector3f globCoord = quadToGlob*quadCoord;
-                globCorners(i,0) = globCoord(0) + odom.pose.pose.position.x;
-                globCorners(i,1) = globCoord(1) + odom.pose.pose.position.y;
+                area = -1;
+                sizePassed = true;
             }
-
-            for(int i=0; i<4; i++)
+            else
             {
-                area += globCorners(i,0)*globCorners((i+1)%4,1) - globCorners(i,1)*globCorners((i+1)%4,0);
-            }
-            area = (float)fabs(area/2);
+                Eigen::MatrixXf globCorners(4,2);
+                for(int i=0; i<4; i++)
+                {
+                    Eigen::Vector3f imgVec(box->cornerX[i],box->cornerY[i],1);
+                    Eigen::Vector3f quadCoord = (camToQuad*scaleUp*invCamMatrix*imgVec) + tCam;
 
-            switch(box->type)
-            {
-                case redType: sizePassed = (fabs(area-redSize)<=delSize); break;
-                case yellowType: sizePassed = (fabs(area-yellowSize)<=delSize); break;
-                case blueType: sizePassed = (fabs(area-blueSize)<=delSize); break;
+                    Eigen::Vector3f globCoord = quadToGlob*quadCoord;
+                    globCorners(i,0) = globCoord(0) + odom.pose.pose.position.x;
+                    globCorners(i,1) = globCoord(1) + odom.pose.pose.position.y;
+                }
+
+                for(int i=0; i<4; i++)
+                {
+                    area += globCorners(i,0)*globCorners((i+1)%4,1) - globCorners(i,1)*globCorners((i+1)%4,0);
+                }
+                area = (float)fabs(area/2);
+
+                if (box->type == redType) sizePassed = (fabs(area-redSize)<=delSize);
+                else if (box->type == yellowType) sizePassed = (fabs(area-yellowSize)<=delSize);
+                else if (box->type == blueType) sizePassed = (fabs(area-blueSize)<=delSize);
             }
         }
         
@@ -263,12 +270,10 @@ detector_msgs::BBPoses findPoses(std::vector<struct bbox> *ptr)
             if(sizeCheckFlag)
             {
                 temp.area = area;
-                switch(box->type)
-                {
-                    case redType: temp.colour = 'red'; break;
-                    case yellowType: temp.colour = 'yellow'; break;
-                    case blueType: temp.colour = 'blue'; break;
-                }
+
+                if(box->type == redType) temp.colour = 'red';
+                else if(box->type == yellowType) temp.colour = 'yellow';
+                else if(box->type == blueType) temp.colour = 'blue';
             }
 
             Eigen::Vector3f imgVec(box->x_mean,box->y_mean,1);
