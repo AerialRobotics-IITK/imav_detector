@@ -64,6 +64,12 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
             queueEnd = queueStart = 0;
             contour_index = 0;
 
+            eigenPassed = false;
+            diagPassed = false;
+            areaPassed = false;
+            sizePassed = false;
+            passed = false;
+
             struct bbox Box;
             Box.id = numBoxes+1;
             Box.warning = 0;
@@ -267,8 +273,13 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
                     if(Box.areaIndex < maxAreaIndex) areaPassed = true; else areaPassed = false;
                 }
 
-                if(Box.warning) diagCheckFlag = false;
-                if(diagCheckFlag)
+                if(centreCorrect && Box.warning == 1) 
+                {
+                    Box.x_mean = (Box.x_mean >= width/2) ? width - (width - Box.x_mean) / centreCorrectIndex : Box.x_mean / centreCorrectIndex;
+                    Box.y_mean = (Box.y_mean >= height/2) ? height - (height - Box.y_mean) / centreCorrectIndex : Box.y_mean / centreCorrectIndex;
+                }
+
+                if(diagCheckFlag && Box.warning != 1)
                 {
                     float diag1=0, diag2=0;
 
@@ -279,7 +290,7 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
                     if(Box.diagIndex < maxDiagIndex) diagPassed = true; else diagPassed = false;
                 }
 
-                passed = (!eigenCheckFlag || eigenPassed) && (!diagCheckFlag || diagPassed) && (!areaCheckFlag || areaPassed);
+                passed = (!eigenCheckFlag || eigenPassed) && (!diagCheckFlag || diagPassed || Box.warning == 1) && (!areaCheckFlag || areaPassed);
                 if(passed)
                 {
                     bboxes.push_back(Box);

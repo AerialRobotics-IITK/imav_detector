@@ -35,6 +35,7 @@ bool eigenCheckFlag = true;
 bool diagCheckFlag = true;
 bool areaCheckFlag = true;
 bool sizeCheckFlag = true;
+bool centreCorrect = true;
 
 bool debug = true;
 bool verbose = false;
@@ -44,6 +45,7 @@ int minSize = 4000;
 float maxAreaIndex = 1;
 float maxDiagIndex = 100;
 float maxEigenIndex = 1.07;
+float centreCorrectIndex = 4;
 float minSizeHeight = 3.000;
 
 bool eigenPassed = false;
@@ -110,6 +112,7 @@ void loadParams(ros::NodeHandle nh)
     nh.getParam("detector/flags/eigenCheck", eigenCheckFlag);
     nh.getParam("detector/flags/areaCheck", areaCheckFlag);
     nh.getParam("detector/flags/sizeCheck", sizeCheckFlag);
+    nh.getParam("detector/flags/centreCorrect", centreCorrect);
 
     nh.getParam("detector/flags/debug", debug);
     nh.getParam("detector/flags/verbose", verbose);
@@ -118,6 +121,7 @@ void loadParams(ros::NodeHandle nh)
     nh.getParam("detector/box/maxAreaIndex", maxAreaIndex);
     nh.getParam("detector/box/maxEigenIndex", maxEigenIndex);
     nh.getParam("detector/box/maxDiagIndex", maxDiagIndex);
+    nh.getParam("detector/box/centerCorrectIndex", centreCorrectIndex);
 
     nh.getParam("detector/camera/translation", tempList);
     for (int i = 0; i < 3; i++)
