@@ -10,6 +10,7 @@
 #include <detector_msgs/BBox.h>
 #include <detector_msgs/BBPose.h>
 #include <detector_msgs/BBPoses.h>
+#include <detector_msgs/signal.h>
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -22,6 +23,10 @@
 #define sign(x) (x>0)?1:0 
 #define check(X) std::cout<<"check "<<X<<std::endl
 
+#define exit execFlag == -1
+#define run execFlag == 1
+
+int execFlag = 1;
 std::string mav_name;
 
 cv::Vec3b BLACK = (0,0,0);
@@ -188,28 +193,46 @@ void loadParams(ros::NodeHandle nh)
     return;
 }
 
+bool serviceCall(detector_msgs::signal::Request &req, detector_msgs::signal::Response &res)
+{
+    switch(req.signal){
+        case -1:
+        case 0:
+        case 1: execFlag = req.signal;
+                ROS_INFO("%d", execFlag);
+                res.success = true;
+                break;
+        default: res.success = false;
+                break;
+    }
+    return true;
+}
+
 void imageCallback(const sensor_msgs::Image msg)
 {
-  cv_bridge::CvImagePtr cv_ptr;
-  try
+  if(run)
   {
-      cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
-  }
-  catch (cv_bridge::Exception &e)
-  {
-      ROS_ERROR("cv_bridge exception: %s", e.what());
-      return;
-  }
+    cv_bridge::CvImagePtr cv_ptr;
+    try
+    {
+        cv_ptr = cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::BGR8);
+    }
+    catch (cv_bridge::Exception &e)
+    {
+        ROS_ERROR("cv_bridge exception: %s", e.what());
+        return;
+    }
 
-  img_ = cv_ptr->image;
-  imageID = msg.header.seq;
-  markedImg_ = cv::Mat(msg.height, msg.width, CV_8UC3);
+    img_ = cv_ptr->image;
+    imageID = msg.header.seq;
+    markedImg_ = cv::Mat(msg.height, msg.width, CV_8UC3);
+  }
   return;
 }
 
 void odomCallback(const nav_msgs::Odometry msg)
 {
-    odom = msg;
+    if(run) odom = msg;
     return;
 }
 

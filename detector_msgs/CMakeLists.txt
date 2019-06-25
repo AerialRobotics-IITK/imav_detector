@@ -1,35 +1,12 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(detector_msgs)
 
-find_package(catkin REQUIRED COMPONENTS
-  catkin_simple
-  geometry_msgs
-  message_generation
-  message_runtime
-  roscpp
-  std_msgs
-)
+find_package(catkin REQUIRED)
+find_package(catkin_simple REQUIRED)
+catkin_simple()
 
-add_message_files(
-  FILES
-    BBox.msg
-    BBPose.msg
-    BBoxes.msg
-    BBPoses.msg
-)
+add_definitions(-std=c++11)
+set(CMAKE_BUILD_TYPE Release)
 
-generate_messages(
-  DEPENDENCIES
-    std_msgs
-    geometry_msgs
-)
-
-catkin_package(
-  CATKIN_DEPENDS
-    catkin_simple 
-    geometry_msgs 
-    message_generation 
-    message_runtime 
-    roscpp 
-    std_msgs
-)
+cs_install()
+cs_export()

@@ -397,10 +397,15 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "detector");
 
     ros::NodeHandle nh;
+    
+    ros::ServiceServer exec_server = nh.advertiseService("execute", serviceCall);
+
     ros::Subscriber image_sub = nh.subscribe<sensor_msgs::Image>("image", 30, imageCallback);
     ros::Subscriber odom_sub = nh.subscribe<nav_msgs::Odometry>("odometry", 10, odomCallback);
+    
     ros::Publisher bbox_pub = nh.advertise<detector_msgs::BBoxes>("bounding_boxes",10);
     ros::Publisher pose_pub = nh.advertise<detector_msgs::BBPoses>("object_poses",10);
+    
     image_transport::ImageTransport it(nh);
     image_transport::Publisher undist_imgPub = it.advertise("undist_image",10);
     image_transport::Publisher marked_imgPub = it.advertise("marked_image", 10);
@@ -408,44 +413,47 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(10);
     loadParams(nh);
 
-    while (nh.ok())
+    while (ros::ok() && !(exit))
     {
-        while(imageID < 1 || odom.pose.pose.position.z == 0) ros::spinOnce();
-
-        if(!isRectified) cv::undistort(img_, undistImg_, intrinsic, distCoeffs);
-        else undistImg_ = img_;
-        
-        std::vector<struct bbox> objects = floodFill(&undistImg_, &markedImg_);
-
-        if(objects.size()>0)
+        if(run)
         {
-            detector_msgs::BBPoses pose_msg = findPoses(&objects);
-            pose_msg.stamp = ros::Time::now();
-            pose_msg.imageID = imageID;
-            pose_msg.mav_name = mav_name;
-            if(pose_msg.object_poses.size()>0)
+            while(imageID < 1 || odom.pose.pose.position.z == 0) ros::spinOnce();
+
+            if(!isRectified) cv::undistort(img_, undistImg_, intrinsic, distCoeffs);
+            else undistImg_ = img_;
+
+            std::vector<struct bbox> objects = floodFill(&undistImg_, &markedImg_);
+
+            if(objects.size()>0)
             {
-                pose_pub.publish(pose_msg);
+                detector_msgs::BBPoses pose_msg = findPoses(&objects);
+                pose_msg.stamp = ros::Time::now();
+                pose_msg.imageID = imageID;
+                pose_msg.mav_name = mav_name;
+                if(pose_msg.object_poses.size()>0)
+                {
+                    pose_pub.publish(pose_msg);
+                }
+            }
+
+            if(debug)
+            {   
+                sensor_msgs::ImagePtr undist_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", undistImg_).toImageMsg();  
+                undist_imgPub.publish(undist_msg);
+                if(objects.size() > 0)
+                {    
+                    detector_msgs::BBoxes msg = createMsg(&objects);
+                    msg.stamp = ros::Time::now();
+                    msg.imageID = imageID;
+                    bbox_pub.publish(msg);
+                }
+                sensor_msgs::ImagePtr marked_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", markedImg_).toImageMsg();
+                marked_imgPub.publish(marked_msg);
             }
         }
 
-        if(debug)
-        {   
-            sensor_msgs::ImagePtr undist_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", undistImg_).toImageMsg();  
-            undist_imgPub.publish(undist_msg);
-            if(objects.size() > 0)
-            {    
-                detector_msgs::BBoxes msg = createMsg(&objects);
-                msg.stamp = ros::Time::now();
-                msg.imageID = imageID;
-                bbox_pub.publish(msg);
-            }
-            sensor_msgs::ImagePtr marked_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", markedImg_).toImageMsg();
-            marked_imgPub.publish(marked_msg);
-        }
-
-        loop_rate.sleep();
         ros::spinOnce();
+        loop_rate.sleep();
     }
     return 0;
 }

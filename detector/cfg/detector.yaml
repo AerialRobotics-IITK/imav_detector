@@ -16,28 +16,28 @@ flags:
   areaCheck: true
   diagCheck: true
   eigenCheck: true
-  sizeCheck: false
-  centreCorrect: true
+  sizeCheck: true
+  centreCorrect: false
   debug: true
   verbose: false
 
 # yellow
 yellow:
-  h_min: 32
-  h_max: 41
-  s_min: 130
+  h_min: 20
+  h_max: 40
+  s_min: 80
   s_max: 255
-  v_min: 130
+  v_min: 80
   v_max: 255
 
 #red
 red:
-  h_min: 6
-  h_max: 15
-  s_min: 164
+  h_min: 0
+  h_max: 20
+  s_min: 80
   s_max: 255
-  v_min: 65
-  v_max: 119
+  v_min: 80
+  v_max: 255
 
 #blue
 blue:
@@ -50,10 +50,10 @@ blue:
 
 sizes:
   #enter object area in sq.m.
-  red: 0
+  red: 0.4875
   blue: 0
   yellow: 0.609
   #enter size tolerance in sq.m.
-  tolerance: 0.0025
+  tolerance: 1
   #height in metres
-  minHeight: 3.000
+  minHeight: 0.000
