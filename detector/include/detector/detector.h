@@ -22,6 +22,8 @@
 #define sign(x) (x>0)?1:0 
 #define check(X) std::cout<<"check "<<X<<std::endl
 
+std::string mav_name;
+
 cv::Vec3b BLACK = (0,0,0);
 cv::Vec3b RED = (255,0,0);
 cv::Vec3b BLUE = (0,0,255);
@@ -89,6 +91,8 @@ int sgnArea(double x1, double x2, double x3, double y1, double y2, double y3)
 
 void loadParams(ros::NodeHandle nh)
 {
+    nh.getParam("detector/mav_name", mav_name);
+
     std::vector<double> tempList;
     int tempIdx=0;
 
@@ -274,10 +278,7 @@ detector_msgs::BBPoses findPoses(std::vector<struct bbox> *ptr)
             if(sizeCheckFlag)
             {
                 temp.area = area;
-
-                if(box->type == redType) temp.colour = 'red';
-                else if(box->type == yellowType) temp.colour = 'yellow';
-                else if(box->type == blueType) temp.colour = 'blue';
+                temp.type = box->type;
             }
 
             Eigen::Vector3f imgVec(box->x_mean,box->y_mean,1);

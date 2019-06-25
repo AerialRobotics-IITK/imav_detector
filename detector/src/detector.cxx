@@ -73,6 +73,7 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
             struct bbox Box;
             Box.id = numBoxes+1;
             Box.warning = 0;
+            Box.type = 0;
             Box.pixSize = 1;            
             
             maxX = minX = Box.rangeX[0] = Box.rangeX[1] = i%width;
@@ -299,7 +300,6 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
                     {
                         pixPos = contour[j];
                         buffer[pixPos] = contourType + numBoxes;
-                        // does not show colors other than blue
                         if(debug)
                         {
                             for(int i=0; i<4; i++)
@@ -422,6 +422,7 @@ int main(int argc, char **argv)
             detector_msgs::BBPoses pose_msg = findPoses(&objects);
             pose_msg.stamp = ros::Time::now();
             pose_msg.imageID = imageID;
+            pose_msg.mav_name = mav_name;
             if(pose_msg.object_poses.size()>0)
             {
                 pose_pub.publish(pose_msg);
