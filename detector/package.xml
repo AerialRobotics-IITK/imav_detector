@@ -22,7 +22,6 @@
   <depend>cmake_modules</depend>
   <depend>roscpp</depend>
   <depend>cv_bridge</depend>
-  <depend>image_transport</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <depend>nav_msgs</depend>
@@ -31,6 +30,6 @@
   <depend>eigen_conversions</depend>
   <depend>tf</depend>
   <depend>tf_conversions</depend>
-  <depend>detector_msgs</depend>
+  <depend>mav_utils_msgs</depend>
 
 </package>

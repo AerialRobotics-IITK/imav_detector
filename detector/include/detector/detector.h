@@ -1,16 +1,15 @@
 #include <ros/ros.h>
-#include <image_transport/image_transport.h>
 #include <std_msgs/Header.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/Point.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <sensor_msgs/Image.h>
 #include <cv_bridge/cv_bridge.h>
-#include <detector_msgs/BBoxes.h>
-#include <detector_msgs/BBox.h>
-#include <detector_msgs/BBPose.h>
-#include <detector_msgs/BBPoses.h>
-#include <detector_msgs/signal.h>
+#include <mav_utils_msgs/BBoxes.h>
+#include <mav_utils_msgs/BBox.h>
+#include <mav_utils_msgs/BBPose.h>
+#include <mav_utils_msgs/BBPoses.h>
+#include <mav_utils_msgs/signal.h>
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -193,7 +192,7 @@ void loadParams(ros::NodeHandle nh)
     return;
 }
 
-bool serviceCall(detector_msgs::signal::Request &req, detector_msgs::signal::Response &res)
+bool serviceCall(mav_utils_msgs::signal::Request &req, mav_utils_msgs::signal::Response &res)
 {
     switch(req.signal){
         case -1:
@@ -236,9 +235,9 @@ void odomCallback(const nav_msgs::Odometry msg)
     return;
 }
 
-detector_msgs::BBPoses findPoses(std::vector<struct bbox> *ptr)
+mav_utils_msgs::BBPoses findPoses(std::vector<struct bbox> *ptr)
 {
-    detector_msgs::BBPoses msg;
+    mav_utils_msgs::BBPoses msg;
     struct bbox *box;
 
     Eigen::Matrix3f scaleUp, quadToGlob;
@@ -295,7 +294,7 @@ detector_msgs::BBPoses findPoses(std::vector<struct bbox> *ptr)
         
         if(!sizeCheckFlag || sizePassed)
         { 
-            detector_msgs::BBPose temp; 
+            mav_utils_msgs::BBPose temp; 
             temp.boxID = box->id;
 
             if(sizeCheckFlag)

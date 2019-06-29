@@ -329,15 +329,15 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
     return bboxes;
 }  
 
-detector_msgs::BBoxes createMsg(std::vector<struct bbox> *ptr)
+mav_utils_msgs::BBoxes createMsg(std::vector<struct bbox> *ptr)
 {
-    detector_msgs::BBoxes obj_msg; 
+    mav_utils_msgs::BBoxes obj_msg; 
     struct bbox *box;
 
     for(unsigned int i=0; i < ptr->size(); i++)
     {
         box = &(ptr->at(i));
-        detector_msgs::BBox temp;
+        mav_utils_msgs::BBox temp;
         temp.boxID = box->id;
 
         for(int i=0; i<2; i++)
@@ -403,13 +403,13 @@ int main(int argc, char **argv)
     ros::Subscriber image_sub = nh.subscribe<sensor_msgs::Image>("image", 30, imageCallback);
     ros::Subscriber odom_sub = nh.subscribe<nav_msgs::Odometry>("odometry", 10, odomCallback);
     
-    ros::Publisher bbox_pub = nh.advertise<detector_msgs::BBoxes>("bounding_boxes",10);
-    ros::Publisher pose_pub = nh.advertise<detector_msgs::BBPoses>("object_poses",10);
-    
-    image_transport::ImageTransport it(nh);
-    image_transport::Publisher undist_imgPub = it.advertise("undist_image",10);
-    image_transport::Publisher marked_imgPub = it.advertise("marked_image", 10);
-    
+    ros::Publisher bbox_pub = nh.advertise<mav_utils_msgs::BBoxes>("bounding_boxes",10);
+    ros::Publisher pose_pub = nh.advertise<mav_utils_msgs::BBPoses>("object_poses",10);
+
+    ros::Publisher undist_imgPub = nh.advertise<sensor_msgs::Image>("undist_image", 1);
+    ros::Publisher marked_imgPub = nh.advertise<sensor_msgs::Image>("marked_image", 1);
+
+
     ros::Rate loop_rate(10);
     loadParams(nh);
 
@@ -426,7 +426,7 @@ int main(int argc, char **argv)
 
             if(objects.size()>0)
             {
-                detector_msgs::BBPoses pose_msg = findPoses(&objects);
+                mav_utils_msgs::BBPoses pose_msg = findPoses(&objects);
                 pose_msg.stamp = ros::Time::now();
                 pose_msg.imageID = imageID;
                 pose_msg.mav_name = mav_name;
@@ -442,7 +442,7 @@ int main(int argc, char **argv)
                 undist_imgPub.publish(undist_msg);
                 if(objects.size() > 0)
                 {    
-                    detector_msgs::BBoxes msg = createMsg(&objects);
+                    mav_utils_msgs::BBoxes msg = createMsg(&objects);
                     msg.stamp = ros::Time::now();
                     msg.imageID = imageID;
                     bbox_pub.publish(msg);
