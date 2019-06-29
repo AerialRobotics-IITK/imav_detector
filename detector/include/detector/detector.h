@@ -25,7 +25,7 @@
 #define exit execFlag == -1
 #define run execFlag == 1
 
-int execFlag = 1;
+int execFlag = 0;
 std::string mav_name;
 
 cv::Vec3b BLACK = (0,0,0);
