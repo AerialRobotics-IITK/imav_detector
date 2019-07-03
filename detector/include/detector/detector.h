@@ -20,13 +20,13 @@
 
 #define min(a,b) (a>b)?b:a
 #define sign(x) (x>0)?1:0 
+#define sq(x) x*x
 #define check(X) std::cout<<"check "<<X<<std::endl
 
 #define exit execFlag == -1
 #define run execFlag == 1
 
 int execFlag = 0;
-std::string mav_name;
 
 cv::Vec3b BLACK = (0,0,0);
 cv::Vec3b RED = (255,0,0);
@@ -53,6 +53,7 @@ float maxDiagIndex = 100;
 float maxEigenIndex = 1.07;
 float centreCorrectIndex = 4;
 float minSizeHeight = 3.000;
+float maxCentreDist = 0.5;
 
 bool eigenPassed = false;
 bool diagPassed = false;
@@ -85,6 +86,7 @@ struct bbox
     int contourX[MAX_CONTOUR_POINTS];
     int contourY[MAX_CONTOUR_POINTS];
     int cornerX[4], cornerY[4];
+    bool store;
 };
 
 // clean
@@ -95,18 +97,16 @@ int sgnArea(double x1, double x2, double x3, double y1, double y2, double y3)
 
 void loadParams(ros::NodeHandle nh)
 {
-    nh.getParam("detector/mav_name", mav_name);
-
     std::vector<double> tempList;
     int tempIdx=0;
 
-    nh.getParam("detector/distortion_coefficients/data", tempList);
+    nh.getParam("distortion_coefficients/data", tempList);
     for(int i=0; i<5; i++)
     {
         distCoeffs.at<double>(i) = tempList[i];
     }
    
-    nh.getParam("detector/camera_matrix/data", tempList);
+    nh.getParam("camera_matrix/data", tempList);
     tempIdx=0;
     for(int i=0; i<3; i++)
     {
@@ -116,28 +116,29 @@ void loadParams(ros::NodeHandle nh)
         }
     }
 
-    nh.getParam("detector/flags/diagCheck", diagCheckFlag);
-    nh.getParam("detector/flags/eigenCheck", eigenCheckFlag);
-    nh.getParam("detector/flags/areaCheck", areaCheckFlag);
-    nh.getParam("detector/flags/sizeCheck", sizeCheckFlag);
-    nh.getParam("detector/flags/centreCorrect", centreCorrect);
+    nh.getParam("flags/diagCheck", diagCheckFlag);
+    nh.getParam("flags/eigenCheck", eigenCheckFlag);
+    nh.getParam("flags/areaCheck", areaCheckFlag);
+    nh.getParam("flags/sizeCheck", sizeCheckFlag);
+    nh.getParam("flags/centreCorrect", centreCorrect);
 
-    nh.getParam("detector/flags/debug", debug);
-    nh.getParam("detector/flags/verbose", verbose);
+    nh.getParam("flags/debug", debug);
+    nh.getParam("flags/verbose", verbose);
 
-    nh.getParam("detector/box/minSize", minSize);
-    nh.getParam("detector/box/maxAreaIndex", maxAreaIndex);
-    nh.getParam("detector/box/maxEigenIndex", maxEigenIndex);
-    nh.getParam("detector/box/maxDiagIndex", maxDiagIndex);
-    nh.getParam("detector/box/centerCorrectIndex", centreCorrectIndex);
+    nh.getParam("box/minSize", minSize);
+    nh.getParam("box/maxAreaIndex", maxAreaIndex);
+    nh.getParam("box/maxEigenIndex", maxEigenIndex);
+    nh.getParam("box/maxDiagIndex", maxDiagIndex);
+    nh.getParam("box/centerCorrectIndex", centreCorrectIndex);
+    nh.getParam("box/maxCentreDist", maxCentreDist);
 
-    nh.getParam("detector/camera/translation", tempList);
+    nh.getParam("camera/translation", tempList);
     for (int i = 0; i < 3; i++)
     {
         tCam(i) = tempList[i];
     }
 
-    nh.getParam("detector/camera/rotation", tempList);
+    nh.getParam("camera/rotation", tempList);
     tempIdx = 0;
     for (int i = 0; i < 3; i++)
     {
@@ -147,34 +148,34 @@ void loadParams(ros::NodeHandle nh)
         }
     }
 
-    nh.getParam("detector/camera/is_rectified", isRectified);
+    nh.getParam("camera/is_rectified", isRectified);
 
-    nh.getParam("detector/yellow/h_max", YHMax);
-    nh.getParam("detector/yellow/h_min", YHMin);
-    nh.getParam("detector/yellow/s_max", YSMax);
-    nh.getParam("detector/yellow/s_min", YSMin);
-    nh.getParam("detector/yellow/v_max", YVMax);
-    nh.getParam("detector/yellow/v_min", YVMin);
+    nh.getParam("yellow/h_max", YHMax);
+    nh.getParam("yellow/h_min", YHMin);
+    nh.getParam("yellow/s_max", YSMax);
+    nh.getParam("yellow/s_min", YSMin);
+    nh.getParam("yellow/v_max", YVMax);
+    nh.getParam("yellow/v_min", YVMin);
 
-    nh.getParam("detector/red/h_max", RHMax);
-    nh.getParam("detector/red/h_min", RHMin);
-    nh.getParam("detector/red/s_max", RSMax);
-    nh.getParam("detector/red/s_min", RSMin);
-    nh.getParam("detector/red/v_max", RVMax);
-    nh.getParam("detector/red/v_min", RVMin);
+    nh.getParam("red/h_max", RHMax);
+    nh.getParam("red/h_min", RHMin);
+    nh.getParam("red/s_max", RSMax);
+    nh.getParam("red/s_min", RSMin);
+    nh.getParam("red/v_max", RVMax);
+    nh.getParam("red/v_min", RVMin);
 
-    nh.getParam("detector/blue/h_max", BHMax);
-    nh.getParam("detector/blue/h_min", BHMin);
-    nh.getParam("detector/blue/s_max", BSMax);
-    nh.getParam("detector/blue/s_min", BSMin);
-    nh.getParam("detector/blue/v_max", BVMax);
-    nh.getParam("detector/blue/v_min", BVMin);
+    nh.getParam("blue/h_max", BHMax);
+    nh.getParam("blue/h_min", BHMin);
+    nh.getParam("blue/s_max", BSMax);
+    nh.getParam("blue/s_min", BSMin);
+    nh.getParam("blue/v_max", BVMax);
+    nh.getParam("blue/v_min", BVMin);
 
-    nh.getParam("detector/sizes/red", redSize);
-    nh.getParam("detector/sizes/blue", blueSize);
-    nh.getParam("detector/sizes/yellow", yellowSize);
-    nh.getParam("detector/sizes/tolerance", delSize);
-    nh.getParam("detector/sizes/minHeight", minSizeHeight);
+    nh.getParam("sizes/red", redSize);
+    nh.getParam("sizes/blue", blueSize);
+    nh.getParam("sizes/yellow", yellowSize);
+    nh.getParam("sizes/tolerance", delSize);
+    nh.getParam("sizes/minHeight", minSizeHeight);
 
     for(int i=0; i<3; i++)
     {
@@ -296,6 +297,7 @@ mav_utils_msgs::BBPoses findPoses(std::vector<struct bbox> *ptr)
         { 
             mav_utils_msgs::BBPose temp; 
             temp.boxID = box->id;
+            temp.store = box->store;
 
             if(sizeCheckFlag)
             {

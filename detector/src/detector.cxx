@@ -261,6 +261,7 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
                 }
                 
                 Box.contourSize = min(contour_index, MAX_CONTOUR_POINTS);
+                Box.store = (sq(Box.x_mean - width/2) + sq(Box.y_mean - height/2) > maxCentreDist) ? false : true;
 
                 if(areaCheckFlag)
                 {
@@ -352,6 +353,7 @@ mav_utils_msgs::BBoxes createMsg(std::vector<struct bbox> *ptr)
         temp.pixSize = box->pixSize;
         temp.contourSize = box->contourSize;       
         temp.full = !box->warning;
+        temp.store = box->store;
 
         if(box->type == redType) temp.colour = "red";
         else if(box->type == yellowType) temp.colour = "yellow";
@@ -396,22 +398,22 @@ int main(int argc, char **argv)
 {
     ros::init(argc, argv, "detector");
 
-    ros::NodeHandle nh;
+    ros::NodeHandle sh, ph("~");
     
-    ros::ServiceServer exec_server = nh.advertiseService("execute", serviceCall);
+    ros::ServiceServer exec_server = ph.advertiseService("terminate", serviceCall);
 
-    ros::Subscriber image_sub = nh.subscribe<sensor_msgs::Image>("image", 30, imageCallback);
-    ros::Subscriber odom_sub = nh.subscribe<nav_msgs::Odometry>("odometry", 10, odomCallback);
+    ros::Subscriber image_sub = sh.subscribe<sensor_msgs::Image>("image", 30, imageCallback);
+    ros::Subscriber odom_sub = sh.subscribe<nav_msgs::Odometry>("odometry", 10, odomCallback);
     
-    ros::Publisher bbox_pub = nh.advertise<mav_utils_msgs::BBoxes>("bounding_boxes",10);
-    ros::Publisher pose_pub = nh.advertise<mav_utils_msgs::BBPoses>("object_poses",10);
-
-    ros::Publisher undist_imgPub = nh.advertise<sensor_msgs::Image>("undist_image", 1);
-    ros::Publisher marked_imgPub = nh.advertise<sensor_msgs::Image>("marked_image", 1);
+    ros::Publisher pose_pub = sh.advertise<mav_utils_msgs::BBPoses>("object_poses",10);
+    ros::Publisher bbox_pub = ph.advertise<mav_utils_msgs::BBoxes>("bounding_boxes",10);
+    
+    ros::Publisher undist_imgPub = ph.advertise<sensor_msgs::Image>("undist_image", 1);
+    ros::Publisher marked_imgPub = ph.advertise<sensor_msgs::Image>("marked_image", 1);
 
 
     ros::Rate loop_rate(10);
-    loadParams(nh);
+    loadParams(ph);
 
     while (ros::ok() && !(exit))
     {
@@ -429,7 +431,6 @@ int main(int argc, char **argv)
                 mav_utils_msgs::BBPoses pose_msg = findPoses(&objects);
                 pose_msg.stamp = ros::Time::now();
                 pose_msg.imageID = imageID;
-                pose_msg.mav_name = mav_name;
                 if(pose_msg.object_poses.size()>0)
                 {
                     pose_pub.publish(pose_msg);
