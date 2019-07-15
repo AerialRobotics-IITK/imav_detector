@@ -11,6 +11,7 @@ box:
   maxEigenIndex: 1.069
   maxDiagIndex: 75
   centreCorrectIndex: 4
+  maxCentreDist: 120
 
 flags:
   areaCheck: true

@@ -31,5 +31,6 @@
   <depend>tf</depend>
   <depend>tf_conversions</depend>
   <depend>mav_utils_msgs</depend>
+  <depend>dynamic_reconfigure</depend>
 
 </package>

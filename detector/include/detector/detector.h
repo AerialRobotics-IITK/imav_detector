@@ -1,19 +1,25 @@
 #include <ros/ros.h>
+
 #include <std_msgs/Header.h>
 #include <nav_msgs/Odometry.h>
-#include <geometry_msgs/Point.h>
-#include <opencv2/highgui/highgui.hpp>
 #include <sensor_msgs/Image.h>
 #include <cv_bridge/cv_bridge.h>
+#include <geometry_msgs/Point.h>
+#include <tf/transform_datatypes.h>
+#include <opencv2/highgui/highgui.hpp>
+
 #include <mav_utils_msgs/BBoxes.h>
 #include <mav_utils_msgs/BBox.h>
 #include <mav_utils_msgs/BBPose.h>
 #include <mav_utils_msgs/BBPoses.h>
 #include <mav_utils_msgs/signal.h>
+
 #include <Eigen/Dense>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-#include <tf/transform_datatypes.h>
+
+#include <dynamic_reconfigure/server.h>
+#include <detector/reconfigConfig.h>
 
 #define MAX_BOXES 10000
 #define MAX_CONTOUR_POINTS 2500
@@ -27,6 +33,7 @@
 #define run execFlag == 1
 
 int execFlag = 0;
+int color_num = 0;
 
 cv::Vec3b BLACK = (0,0,0);
 cv::Vec3b RED = (255,0,0);
@@ -93,6 +100,138 @@ struct bbox
 int sgnArea(double x1, double x2, double x3, double y1, double y2, double y3)
 {
     return sign(x1*y2 + x2*y3 + x3*y1 - y1*x2 - y2*x3 - y3*x1);
+}
+
+void cfgCallback(detector::reconfigConfig &config, uint32_t level){
+    if(run){
+        switch(level){
+            case 0: isRectified = config.is_rectified;
+                    ROS_INFO("Set isRectified to %d", isRectified); break;
+
+            case 1: tCam(0) = config.groups.camera_translation.t_x;
+                    ROS_INFO("Set t_x to %f", tCam(0)); break;
+            case 2: tCam(1) = config.groups.camera_translation.t_y;
+                    ROS_INFO("Set t_y to %f", tCam(1)); break;
+            case 3: tCam(2) = config.groups.camera_translation.t_z;
+                    ROS_INFO("Set t_z to %f", tCam(2)); break;
+
+            case 4: quadToCam(0,0) = config.groups.camera_rotation.r_xx;
+                    ROS_INFO("Set r_xx to %f", quadToCam(0,0)); break;
+            case 5: quadToCam(0,1) = config.groups.camera_rotation.r_xy;
+                    ROS_INFO("Set r_xy to %f", quadToCam(0,1)); break;
+            case 6: quadToCam(0,2) = config.groups.camera_rotation.r_xz;
+                    ROS_INFO("Set r_xz to %f", quadToCam(0,2)); break;
+            case 7: quadToCam(1,0) = config.groups.camera_rotation.r_yx;
+                    ROS_INFO("Set r_yx to %f", quadToCam(1,0)); break;
+            case 8: quadToCam(1,1) = config.groups.camera_rotation.r_yy;
+                    ROS_INFO("Set r_yy to %f", quadToCam(1,1)); break;
+            case 9: quadToCam(1,2) = config.groups.camera_rotation.r_yz;
+                    ROS_INFO("Set r_yz to %f", quadToCam(1,2)); break;
+            case 10: quadToCam(2,0) = config.groups.camera_rotation.r_zx;
+                    ROS_INFO("Set r_zx to %f", quadToCam(2,0)); break;
+            case 11: quadToCam(2,1) = config.groups.camera_rotation.r_zy;
+                    ROS_INFO("Set r_zy to %f", quadToCam(2,1)); break;
+            case 12: quadToCam(2,2) = config.groups.camera_rotation.r_zz;
+                    ROS_INFO("Set r_zz to %f", quadToCam(2,2)); break;
+        
+            case 13: minSize = config.groups.box.minSize;
+                     ROS_INFO("Set minSize to %d", minSize); break;
+            case 14: maxAreaIndex = config.groups.box.maxAreaIndex;
+                     ROS_INFO("Set maxAreaIndex to %f", maxAreaIndex); break;
+            case 15: maxEigenIndex = config.groups.box.maxEigenIndex;
+                     ROS_INFO("Set maxEigenIndex to %f", maxEigenIndex); break;
+            case 16: maxDiagIndex = config.groups.box.maxDiagIndex;
+                     ROS_INFO("Set maxDiagIndex to %f", maxDiagIndex); break;
+            case 17: centreCorrectIndex = config.groups.box.centreCorrectIndex;
+                     ROS_INFO("Set centreCorrectIndex to %f", centreCorrectIndex); break;
+            case 37: maxCentreDist = config.groups.box.maxCentreDist;
+                     ROS_INFO("Set maxCentreDist to %f", maxCentreDist); break;
+
+            case 18: debug = config.groups.flags.debug;
+                     ROS_INFO("Set debug to %d", debug); break;
+            case 19: verbose = config.groups.flags.verbose;
+                     ROS_INFO("Set verbose to %d", verbose); break;
+            case 20: areaCheckFlag = config.groups.flags.areaCheck;
+                     ROS_INFO("Set areaCheckFlag to %d", areaCheckFlag); break;
+            case 21: eigenCheckFlag = config.groups.flags.eigenCheck;
+                     ROS_INFO("Set eigenCheckFlag to %d", eigenCheckFlag); break;
+            case 22: diagCheckFlag = config.groups.flags.diagCheck;
+                     ROS_INFO("Set diagCheckFlag to %d", diagCheckFlag); break;
+            case 23: sizeCheckFlag = config.groups.flags.sizeCheck;
+                     ROS_INFO("Set sizeCheckFlag to %d", sizeCheckFlag); break;
+            case 24: centreCorrect = config.groups.flags.centreCorrect;
+                     ROS_INFO("Set centreCorrect to %d", centreCorrect); break;
+
+            case 25: color_num = config.groups.hsv.color; break;
+            
+            case 26: switch(color_num){
+                        case 0: RHMin = config.groups.hsv.h_min;
+                                ROS_INFO("Set RHMin to %d", RHMin); break;
+                        case 1: BHMin = config.groups.hsv.h_min;
+                                ROS_INFO("Set BHMin to %d", BHMin); break;
+                        case 2: YHMin = config.groups.hsv.h_min;
+                                ROS_INFO("Set YHMin to %d", YHMin); break;
+                     } break;
+            
+            case 27: switch(color_num){
+                        case 0: RHMax = config.groups.hsv.h_min;
+                                ROS_INFO("Set RHMax to %d", RHMax); break;
+                        case 1: BHMax = config.groups.hsv.h_min;
+                                ROS_INFO("Set BHMax to %d", BHMax); break;
+                        case 2: YHMax = config.groups.hsv.h_min;
+                                ROS_INFO("Set YHMax to %d", YHMax); break;
+                     } break;
+            
+            case 28: switch(color_num){
+                        case 0: RSMin = config.groups.hsv.s_min;
+                                ROS_INFO("Set RSMin to %d", RSMin); break;
+                        case 1: BSMin = config.groups.hsv.s_min;
+                                ROS_INFO("Set BSMin to %d", BSMin); break;
+                        case 2: YSMin = config.groups.hsv.s_min;
+                                ROS_INFO("Set YSMin to %d", YSMin); break;
+                     } break;
+            
+            case 29: switch(color_num){
+                        case 0: RSMax = config.groups.hsv.s_max;
+                                ROS_INFO("Set RSMax to %d", RSMax); break;
+                        case 1: BSMax = config.groups.hsv.s_max;
+                                ROS_INFO("Set BSMax to %d", BSMax); break;
+                        case 2: YSMax = config.groups.hsv.s_max;
+                                ROS_INFO("Set YSMax to %d", YSMax); break;
+                     } break;
+            
+            case 30: switch(color_num){
+                        case 0: RVMin = config.groups.hsv.v_min;
+                                ROS_INFO("Set RVMin to %d", RVMin); break;
+                        case 1: BVMin = config.groups.hsv.v_min;
+                                ROS_INFO("Set BVMin to %d", BVMin); break;
+                        case 2: YVMin = config.groups.hsv.v_min;
+                                ROS_INFO("Set YVMin to %d", YVMin); break;
+                     } break;
+           
+            case 31: switch(color_num){
+                        case 0: RVMax = config.groups.hsv.v_max;
+                                ROS_INFO("Set RVMax to %d", RVMax); break;
+                        case 1: BVMax = config.groups.hsv.v_max;
+                                ROS_INFO("Set BVMax to %d", BVMax); break;
+                        case 2: YVMax = config.groups.hsv.v_max;
+                                ROS_INFO("Set YVMax to %d", YVMax); break;
+                     } break;
+
+            case 32: redSize = config.groups.sizes.r_size;
+                     ROS_INFO("Set redSize to %f", redSize); break;
+            case 33: blueSize = config.groups.sizes.b_size;
+                     ROS_INFO("Set blueSize to %f", blueSize); break;
+            case 34: yellowSize = config.groups.sizes.y_size;
+                     ROS_INFO("Set yellowSize to %f", yellowSize); break;
+            case 35: delSize = config.groups.sizes.del_size;
+                     ROS_INFO("Set delSize to %f", delSize); break;
+            case 36: minSizeHeight = config.groups.sizes.min_height;
+                     ROS_INFO("Set minSizeHeight to %f", minSizeHeight); break;
+        }
+
+        return;
+    } 
 }
 
 void loadParams(ros::NodeHandle nh)
@@ -199,7 +338,11 @@ bool serviceCall(mav_utils_msgs::signal::Request &req, mav_utils_msgs::signal::R
         case -1:
         case 0:
         case 1: execFlag = req.signal;
-                ROS_INFO("%d", execFlag);
+                switch(execFlag){
+                    case 0: ROS_INFO("Paused"); break;
+                    case 1: ROS_INFO("Starting"); break;
+                    case -1: ROS_INFO("Exiting"); break;
+                }
                 res.success = true;
                 break;
         default: res.success = false;

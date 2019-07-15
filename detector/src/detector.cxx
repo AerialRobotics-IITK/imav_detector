@@ -411,15 +411,20 @@ int main(int argc, char **argv)
     ros::Publisher undist_imgPub = ph.advertise<sensor_msgs::Image>("undist_image", 1);
     ros::Publisher marked_imgPub = ph.advertise<sensor_msgs::Image>("marked_image", 1);
 
+    dynamic_reconfigure::Server<detector::reconfigConfig> cfg_server;
+    dynamic_reconfigure::Server<detector::reconfigConfig>::CallbackType call_f = boost::bind(&cfgCallback, _1, _2);
+    cfg_server.setCallback(call_f);
 
     ros::Rate loop_rate(10);
     loadParams(ph);
 
-    while (ros::ok() && !(exit))
+    while(ros::ok() && !(exit))
     {
         if(run)
         {
-            while(imageID < 1 || odom.pose.pose.position.z == 0) ros::spinOnce();
+            while((imageID < 1 || odom.pose.pose.position.z == 0) && !(exit)){
+                if(run) ros::spinOnce();
+            }
 
             if(!isRectified) cv::undistort(img_, undistImg_, intrinsic, distCoeffs);
             else undistImg_ = img_;
