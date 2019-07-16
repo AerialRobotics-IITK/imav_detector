@@ -6,6 +6,7 @@ int getObjectType(cv::Vec3b pixel)
     if(h>=RHMin && h<=RHMax && s>=RSMin && s<=RSMax && v>=RVMin && v<=RVMax) return redType;
     else if(h>=YHMin && h<=YHMax && s>=YSMin && s<=YSMax && v>=YVMin && v<=YVMax) return yellowType;
     else if(h>=BHMin && h<=BHMax && s>=BSMin && s<=BSMax && v>=BVMin && v<=BVMax) return blueType;
+    else if(h>=OHMin && h<=OHMax && s>=OSMin && s<=OSMax && v>=OVMin && v<=OVMax) return orangeType;
     else return 0;
 }
 
@@ -358,6 +359,7 @@ mav_utils_msgs::BBoxes createMsg(std::vector<struct bbox> *ptr)
         if(box->type == redType) temp.colour = "red";
         else if(box->type == yellowType) temp.colour = "yellow";
         else if(box->type == blueType) temp.colour = "blue";
+        else if(box->type == orangeType) temp.colour = "orange";
         else temp.colour = "wrong";
 
         for(int j=0; j<4; j++)

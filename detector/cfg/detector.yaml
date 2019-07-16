@@ -49,11 +49,21 @@ blue:
   v_min: 100
   v_max: 255
 
+#orange
+orange:
+  h_min: 15
+  h_max: 35
+  s_min: 80
+  s_max: 255
+  v_min: 100
+  v_max: 255
+
 sizes:
   #enter object area in sq.m.
   red: 0.4875
   blue: 0
   yellow: 0.609
+  orange: 0.5
   #enter size tolerance in sq.m.
   tolerance: 1
   #height in metres

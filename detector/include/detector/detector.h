@@ -40,7 +40,7 @@ cv::Vec3b RED = (255,0,0);
 cv::Vec3b BLUE = (0,0,255);
 cv::Vec3b GREEN = (0,255,0);
 
-int redType = -10, yellowType = -20, blueType = -30;
+int redType = -10, yellowType = -20, blueType = -30, orangeType = -40;
 int borderType = (int)10E4;
 int contourType = (int)10E6;
 
@@ -71,6 +71,7 @@ bool passed = false;
 int YHMax = 20 , YHMin = 40 , YSMax = 255, YSMin = 100, YVMax = 255, YVMin = 100;
 int RHMax = 0  , RHMin = 20 , RSMax = 255, RSMin = 100, RVMax = 255, RVMin = 100;
 int BHMax = 120, BHMin = 100, BSMax = 255, BSMin = 100, BVMax = 255, BVMin = 100;
+int OHMax = 35, OHMin =15, OSMax = 255, OSMin = 100, OVMax = 255, OVMin = 100;
 
 int imageID = 0;
 nav_msgs::Odometry odom;
@@ -81,7 +82,7 @@ cv::Mat img_, undistImg_, markedImg_;
 Eigen::Matrix3f camMatrix, invCamMatrix, camToQuad, quadToCam;
 Eigen::Vector3f tCam;
 
-float redSize, yellowSize, blueSize, delSize;
+float redSize, yellowSize, blueSize, orangeSize, delSize;
 
 struct bbox
 {
@@ -171,15 +172,19 @@ void cfgCallback(detector::reconfigConfig &config, uint32_t level){
                                 ROS_INFO("Set BHMin to %d", BHMin); break;
                         case 2: YHMin = config.groups.hsv.h_min;
                                 ROS_INFO("Set YHMin to %d", YHMin); break;
+                        case 3: OHMin = config.groups.hsv.h_min;
+                                ROS_INFO("Set OHMin to %d", OHMin); break;
                      } break;
             
             case 27: switch(color_num){
-                        case 0: RHMax = config.groups.hsv.h_min;
+                        case 0: RHMax = config.groups.hsv.h_max;
                                 ROS_INFO("Set RHMax to %d", RHMax); break;
-                        case 1: BHMax = config.groups.hsv.h_min;
+                        case 1: BHMax = config.groups.hsv.h_max;
                                 ROS_INFO("Set BHMax to %d", BHMax); break;
-                        case 2: YHMax = config.groups.hsv.h_min;
+                        case 2: YHMax = config.groups.hsv.h_max;
                                 ROS_INFO("Set YHMax to %d", YHMax); break;
+                        case 3: OHMax = config.groups.hsv.h_max;
+                                ROS_INFO("Set OHMax to %d", OHMax); break;        
                      } break;
             
             case 28: switch(color_num){
@@ -189,6 +194,8 @@ void cfgCallback(detector::reconfigConfig &config, uint32_t level){
                                 ROS_INFO("Set BSMin to %d", BSMin); break;
                         case 2: YSMin = config.groups.hsv.s_min;
                                 ROS_INFO("Set YSMin to %d", YSMin); break;
+                        case 3: OSMin = config.groups.hsv.s_min;
+                                ROS_INFO("Set OSMin to %d", OSMin); break;
                      } break;
             
             case 29: switch(color_num){
@@ -198,6 +205,8 @@ void cfgCallback(detector::reconfigConfig &config, uint32_t level){
                                 ROS_INFO("Set BSMax to %d", BSMax); break;
                         case 2: YSMax = config.groups.hsv.s_max;
                                 ROS_INFO("Set YSMax to %d", YSMax); break;
+                        case 3: OSMax = config.groups.hsv.s_max;
+                                ROS_INFO("Set OSMax to %d", OSMax); break;
                      } break;
             
             case 30: switch(color_num){
@@ -207,6 +216,8 @@ void cfgCallback(detector::reconfigConfig &config, uint32_t level){
                                 ROS_INFO("Set BVMin to %d", BVMin); break;
                         case 2: YVMin = config.groups.hsv.v_min;
                                 ROS_INFO("Set YVMin to %d", YVMin); break;
+                        case 3: OVMin = config.groups.hsv.v_min;
+                                ROS_INFO("Set OVMin to %d", OVMin); break;
                      } break;
            
             case 31: switch(color_num){
@@ -216,6 +227,8 @@ void cfgCallback(detector::reconfigConfig &config, uint32_t level){
                                 ROS_INFO("Set BVMax to %d", BVMax); break;
                         case 2: YVMax = config.groups.hsv.v_max;
                                 ROS_INFO("Set YVMax to %d", YVMax); break;
+                        case 3: OVMax = config.groups.hsv.v_max;
+                                ROS_INFO("Set OVMax to %d", OVMax); break;
                      } break;
 
             case 32: redSize = config.groups.sizes.r_size;
@@ -224,6 +237,8 @@ void cfgCallback(detector::reconfigConfig &config, uint32_t level){
                      ROS_INFO("Set blueSize to %f", blueSize); break;
             case 34: yellowSize = config.groups.sizes.y_size;
                      ROS_INFO("Set yellowSize to %f", yellowSize); break;
+            case 38: orangeSize = config.groups.sizes.o_size;
+                     ROS_INFO("Set orangeSize to %f", orangeSize); break;
             case 35: delSize = config.groups.sizes.del_size;
                      ROS_INFO("Set delSize to %f", delSize); break;
             case 36: minSizeHeight = config.groups.sizes.min_height;
@@ -310,9 +325,17 @@ void loadParams(ros::NodeHandle nh)
     nh.getParam("blue/v_max", BVMax);
     nh.getParam("blue/v_min", BVMin);
 
+    nh.getParam("orange/h_max", OHMax);
+    nh.getParam("orange/h_min", OHMin);
+    nh.getParam("orange/s_max", OSMax);
+    nh.getParam("orange/s_min", OSMin);
+    nh.getParam("orange/v_max", OVMax);
+    nh.getParam("orange/v_min", OVMin);
+
     nh.getParam("sizes/red", redSize);
     nh.getParam("sizes/blue", blueSize);
     nh.getParam("sizes/yellow", yellowSize);
+    nh.getParam("sizes/orange", orangeSize);
     nh.getParam("sizes/tolerance", delSize);
     nh.getParam("sizes/minHeight", minSizeHeight);
 
@@ -433,6 +456,7 @@ mav_utils_msgs::BBPoses findPoses(std::vector<struct bbox> *ptr)
                 if (box->type == redType) sizePassed = (fabs(area-redSize)<=delSize);
                 else if (box->type == yellowType) sizePassed = (fabs(area-yellowSize)<=delSize);
                 else if (box->type == blueType) sizePassed = (fabs(area-blueSize)<=delSize);
+                else if (box->type == orangeType) sizePassed = (fabs(area-orangeSize)<=delSize);
             }
         }
         
@@ -441,12 +465,9 @@ mav_utils_msgs::BBPoses findPoses(std::vector<struct bbox> *ptr)
             mav_utils_msgs::BBPose temp; 
             temp.boxID = box->id;
             temp.store = box->store;
+            temp.type = box->type;
 
-            if(sizeCheckFlag)
-            {
-                temp.area = area;
-                temp.type = box->type;
-            }
+            if(sizeCheckFlag) temp.area = area;
 
             Eigen::Vector3f imgVec(box->x_mean,box->y_mean,1);
             Eigen::Vector3f quadCoord = (camToQuad*scaleUp*invCamMatrix*imgVec) + tCam;

@@ -18,7 +18,7 @@
       <remap from="image" to="usb_cam/image_raw"/>
       <remap from="odometry" to="odom"/>
       <remap from="bounding_boxes" to="bounding_boxes"/>
-      <remap from="object_poses" to="/object_poses"/>
+      <remap from="object_poses" to="object_poses"/>
       <remap from="undist_image" to="undist_image"/>
       <remap from="marked_image" to="marked_image"/>
     </node>
