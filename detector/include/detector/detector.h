@@ -26,7 +26,7 @@
 
 #define min(a,b) (a>b)?b:a
 #define sign(x) (x>0)?1:0 
-#define sq(x) x*x
+#define sq(x) (x)*(x)
 #define check(X) std::cout<<"check "<<X<<std::endl
 
 #define exit execFlag == -1
