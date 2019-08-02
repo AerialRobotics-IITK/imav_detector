@@ -22,10 +22,12 @@ flags:
   debug: true
   verbose: false
 
+# input_hsv = (actual_hsv + 90) % 180
+
 # yellow
 yellow:
-  h_min: 20
-  h_max: 40
+  h_min: 110
+  h_max: 130
   s_min: 80
   s_max: 255
   v_min: 80
@@ -33,8 +35,8 @@ yellow:
 
 #red
 red:
-  h_min: 0
-  h_max: 20
+  h_min: 90
+  h_max: 110
   s_min: 80
   s_max: 255
   v_min: 80
@@ -42,8 +44,8 @@ red:
 
 #blue
 blue:
-  h_min: 60
-  h_max: 80
+  h_min: 10
+  h_max: 30
   s_min: 35
   s_max: 255
   v_min: 100
@@ -51,8 +53,8 @@ blue:
 
 #orange
 orange:
-  h_min: 15
-  h_max: 35
+  h_min: 105
+  h_max: 125
   s_min: 80
   s_max: 255
   v_min: 100

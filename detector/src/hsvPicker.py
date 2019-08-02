@@ -57,8 +57,13 @@ class HSVPicker:
         regionH = h[abs(hZ)<=self.sigma]
         regionS = s[abs(sZ)<=self.sigma]
         regionV = v[abs(vZ)<=self.sigma]
+        for i in range(len(regionH)):
+            regionH[i] = (regionH[i] + 90) % 180            
+        for i in range(len(regionS)):
+            regionS[i] = (regionS[i] + 90) % 180
+        for i in range(len(regionV)):
+            regionV[i] = (regionV[i] + 90) % 180
         return [np.min(regionH),np.min(regionS),np.min(regionV)], [np.max(regionH),np.max(regionS),np.max(regionV)]
-            
 
     def on_mouse(self, event, x, y, flags, param):
         if event == cv2.EVENT_LBUTTONDOWN:

@@ -68,10 +68,10 @@ bool areaPassed = false;
 bool sizePassed = false;
 bool passed = false;
 
-int YHMax = 20 , YHMin = 40 , YSMax = 255, YSMin = 100, YVMax = 255, YVMin = 100;
-int RHMax = 0  , RHMin = 20 , RSMax = 255, RSMin = 100, RVMax = 255, RVMin = 100;
-int BHMax = 120, BHMin = 100, BSMax = 255, BSMin = 100, BVMax = 255, BVMin = 100;
-int OHMax = 35, OHMin =15, OSMax = 255, OSMin = 100, OVMax = 255, OVMin = 100;
+int YHMin = 110, YHMax = 130, YSMin = 100, YSMax = 255, YVMin = 100, YVMax = 255;
+int RHMin = 90 , RHMax = 110, RSMin = 100, RSMax = 255, RVMin = 100, RVMax = 255;
+int BHMin = 10 , BHMax = 30 , BSMin = 100, BSMax = 255, BVMin = 100, BVMax = 255;
+int OHMin = 105, OHMax = 125, OSMin = 100, OSMax = 255, OVMin = 100, OVMax = 255;
 
 int imageID = 0;
 nav_msgs::Odometry odom;
@@ -166,24 +166,24 @@ void cfgCallback(detector::reconfigConfig &config, uint32_t level){
             case 25: color_num = config.groups.hsv.color; break;
             
             case 26: switch(color_num){
-                        case 0: RHMin = config.groups.hsv.h_min;
+                        case 0: RHMin = (config.groups.hsv.h_min + 90) % 180;
                                 ROS_INFO("Set RHMin to %d", RHMin); break;
-                        case 1: BHMin = config.groups.hsv.h_min;
+                        case 1: BHMin = (config.groups.hsv.h_min + 90) % 180;
                                 ROS_INFO("Set BHMin to %d", BHMin); break;
-                        case 2: YHMin = config.groups.hsv.h_min;
+                        case 2: YHMin = (config.groups.hsv.h_min + 90) % 180;
                                 ROS_INFO("Set YHMin to %d", YHMin); break;
-                        case 3: OHMin = config.groups.hsv.h_min;
+                        case 3: OHMin = (config.groups.hsv.h_min + 90) % 180;
                                 ROS_INFO("Set OHMin to %d", OHMin); break;
                      } break;
             
             case 27: switch(color_num){
-                        case 0: RHMax = config.groups.hsv.h_max;
+                        case 0: RHMax = (config.groups.hsv.h_max + 90) % 180;
                                 ROS_INFO("Set RHMax to %d", RHMax); break;
-                        case 1: BHMax = config.groups.hsv.h_max;
+                        case 1: BHMax = (config.groups.hsv.h_max + 90) % 180;
                                 ROS_INFO("Set BHMax to %d", BHMax); break;
-                        case 2: YHMax = config.groups.hsv.h_max;
+                        case 2: YHMax = (config.groups.hsv.h_max + 90) % 180;
                                 ROS_INFO("Set YHMax to %d", YHMax); break;
-                        case 3: OHMax = config.groups.hsv.h_max;
+                        case 3: OHMax = (config.groups.hsv.h_max + 90) % 180;
                                 ROS_INFO("Set OHMax to %d", OHMax); break;        
                      } break;
             
