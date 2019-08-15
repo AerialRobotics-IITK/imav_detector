@@ -2,7 +2,7 @@
 
 int getObjectType(cv::Vec3b pixel)
 {
-    int h = (pixel[0] + 90) % 180, s = (pixel[1] + 90) % 180, v = (pixel[2] + 90) % 180;
+    int h = (pixel[0] + 90) % 180, s = pixel[1], v = pixel[2];
     if(h>=RHMin && h<=RHMax && s>=RSMin && s<=RSMax && v>=RVMin && v<=RVMax) return redType;
     else if(h>=YHMin && h<=YHMax && s>=YSMin && s<=YSMax && v>=YVMin && v<=YVMax) return yellowType;
     else if(h>=BHMin && h<=BHMax && s>=BSMin && s<=BSMax && v>=BVMin && v<=BVMax) return blueType;
