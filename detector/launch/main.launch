@@ -21,6 +21,7 @@
       <remap from="object_poses" to="object_poses"/>
       <remap from="undist_image" to="undist_image"/>
       <remap from="marked_image" to="marked_image"/>
+      <remap from="buffer" to="buffer"/>
     </node>
   </group>
 </launch>

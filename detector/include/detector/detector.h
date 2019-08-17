@@ -402,6 +402,13 @@ void odomCallback(const nav_msgs::Odometry msg)
     return;
 }
 
+cv::Mat displayBuffer(int* buffer,int cols, int rows)
+{
+    cv::Mat imgBuf(cols, rows, CV_8UC1);
+    for(int i=0; i<cols*rows; i++) imgBuf.at<int>(cv::Point(i%cols, i/cols)) = (buffer[i]>0 and buffer[i]<MAX_BOXES) ? 255 : 0;
+    return imgBuf;
+}
+
 mav_utils_msgs::BBPoses findPoses(std::vector<struct bbox> *ptr)
 {
     mav_utils_msgs::BBPoses msg;

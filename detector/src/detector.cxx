@@ -10,7 +10,7 @@ int getObjectType(cv::Vec3b pixel)
     else return 0;
 }
 
-std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
+std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output, int* buffer)
 {
     std::vector<struct bbox> bboxes;
     if(debug) *output = *input;
@@ -31,7 +31,7 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
     int* stack = (int*)calloc(res, sizeof(int));
     int* contour = (int*)calloc(res, sizeof(int));
 
-    int* buffer = (int*)calloc(res, sizeof(int));
+    buffer = (int*)calloc(res, sizeof(int));
     for(int i=0; i<res; i++)
     {
         buffer[i] = getObjectType(hsv.at<cv::Vec3b>(cv::Point(i%width, i/width)));
@@ -236,7 +236,7 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
 
                 if(sgn1 == sgn2)
                 {
-                    for (int i = 0; i < 4; i++)
+                    for (int i = 0; i < 4; i++) 
                     {
                         Box.cornerX[i] = cX[i];
                         Box.cornerY[i] = cY[i];
@@ -326,7 +326,6 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output)
 
     free(stack);
     free(contour);
-    free(buffer);
 
     return bboxes;
 }  
@@ -412,13 +411,16 @@ int main(int argc, char **argv)
     
     ros::Publisher undist_imgPub = ph.advertise<sensor_msgs::Image>("undist_image", 1);
     ros::Publisher marked_imgPub = ph.advertise<sensor_msgs::Image>("marked_image", 1);
+    ros::Publisher buffer_imgPub = ph.advertise<sensor_msgs::Image>("buffer", 1);
 
     dynamic_reconfigure::Server<detector::reconfigConfig> cfg_server;
     dynamic_reconfigure::Server<detector::reconfigConfig>::CallbackType call_f = boost::bind(&cfgCallback, _1, _2);
     cfg_server.setCallback(call_f);
 
     ros::Rate loop_rate(10);
-    loadParams(ph);
+    int* buf; cv::Mat imgBuf;
+    int cols, rows;
+    loadParams(ph); 
 
     while(ros::ok() && !(exit))
     {
@@ -430,8 +432,9 @@ int main(int argc, char **argv)
 
             if(!isRectified) cv::undistort(img_, undistImg_, intrinsic, distCoeffs);
             else undistImg_ = img_;
+            cols = undistImg_.cols; rows = undistImg_.rows;
 
-            std::vector<struct bbox> objects = floodFill(&undistImg_, &markedImg_);
+            std::vector<struct bbox> objects = floodFill(&undistImg_, &markedImg_, buf);
 
             if(objects.size()>0)
             {
@@ -457,6 +460,8 @@ int main(int argc, char **argv)
                 }
                 sensor_msgs::ImagePtr marked_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", markedImg_).toImageMsg();
                 marked_imgPub.publish(marked_msg);
+                sensor_msgs::ImagePtr buffer_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", displayBuffer(buf, cols, rows)).toImageMsg();
+                buffer_imgPub.publish(buffer_msg);
             }
         }
 
