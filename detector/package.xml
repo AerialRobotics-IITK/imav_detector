@@ -21,7 +21,6 @@
 
   <depend>cmake_modules</depend>
   <depend>roscpp</depend>
-  <depend>rospy</depend>
   <depend>cv_bridge</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
