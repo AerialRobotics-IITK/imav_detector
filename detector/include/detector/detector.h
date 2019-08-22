@@ -6,6 +6,7 @@
 #include <cv_bridge/cv_bridge.h>
 #include <geometry_msgs/Point.h>
 #include <tf/transform_datatypes.h>
+#include <opencv2/opencv.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
 #include <mav_utils_msgs/BBoxes.h>
@@ -77,7 +78,7 @@ int imageID = 0;
 nav_msgs::Odometry odom;
 cv::Mat intrinsic = cv::Mat_<double>(3,3);
 cv::Mat distCoeffs = cv::Mat_<double>(1,5);
-cv::Mat img_, undistImg_, markedImg_;
+cv::Mat img_, undistImg_, markedImg_, bufferImg_;
 
 Eigen::Matrix3f camMatrix, invCamMatrix, camToQuad, quadToCam;
 Eigen::Vector3f tCam;

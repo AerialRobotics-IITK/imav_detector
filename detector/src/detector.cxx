@@ -10,10 +10,11 @@ int getObjectType(cv::Vec3b pixel)
     else return 0;
 }
 
-std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output, int* buffer)
+std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output, cv::Mat *buf)
 {
     std::vector<struct bbox> bboxes;
     if(debug) *output = *input;
+    if(debug) *buf = *input;
     cv::Mat hsv(input->cols, input->rows, CV_8UC3);
     cv::cvtColor(*input, hsv, cv::COLOR_BGR2HSV);
 
@@ -30,8 +31,8 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output, int* buffer)
 
     int* stack = (int*)calloc(res, sizeof(int));
     int* contour = (int*)calloc(res, sizeof(int));
+    int* buffer = (int*)calloc(res, sizeof(int));
 
-    buffer = (int*)calloc(res, sizeof(int));
     for(int i=0; i<res; i++)
     {
         buffer[i] = getObjectType(hsv.at<cv::Vec3b>(cv::Point(i%width, i/width)));
@@ -293,6 +294,15 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output, int* buffer)
                     if(Box.diagIndex < maxDiagIndex) diagPassed = true; else diagPassed = false;
                 }
 
+                if (debug)
+                {
+                    for (int i = 0; i < 4; i++)
+                    {
+                        int pos = pixPos + expand[i];
+                        buf->at<cv::Vec3b>(cv::Point(pos % width, pos / width)) = BLUE;
+                    }
+                }
+
                 passed = (!eigenCheckFlag || eigenPassed) && (!diagCheckFlag || diagPassed || Box.warning == 1) && (!areaCheckFlag || areaPassed);
                 if(passed)
                 {
@@ -326,6 +336,7 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output, int* buffer)
 
     free(stack);
     free(contour);
+    free(buffer);
 
     return bboxes;
 }  
@@ -411,14 +422,13 @@ int main(int argc, char **argv)
     
     ros::Publisher undist_imgPub = ph.advertise<sensor_msgs::Image>("undist_image", 1);
     ros::Publisher marked_imgPub = ph.advertise<sensor_msgs::Image>("marked_image", 1);
-    ros::Publisher buffer_imgPub = ph.advertise<sensor_msgs::Image>("buffer", 1);
+    ros::Publisher buffer_imgPub = ph.advertise<sensor_msgs::Image>("flood_image", 1);
 
     dynamic_reconfigure::Server<detector::reconfigConfig> cfg_server;
     dynamic_reconfigure::Server<detector::reconfigConfig>::CallbackType call_f = boost::bind(&cfgCallback, _1, _2);
     cfg_server.setCallback(call_f);
 
     ros::Rate loop_rate(10);
-    int* buf; cv::Mat imgBuf;
     int cols, rows;
     loadParams(ph); 
 
@@ -434,7 +444,7 @@ int main(int argc, char **argv)
             else undistImg_ = img_;
             cols = undistImg_.cols; rows = undistImg_.rows;
 
-            std::vector<struct bbox> objects = floodFill(&undistImg_, &markedImg_, buf);
+            std::vector<struct bbox> objects = floodFill(&undistImg_, &markedImg_, &bufferImg_);
 
             if(objects.size()>0)
             {
@@ -460,8 +470,18 @@ int main(int argc, char **argv)
                 }
                 sensor_msgs::ImagePtr marked_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", markedImg_).toImageMsg();
                 marked_imgPub.publish(marked_msg);
-                sensor_msgs::ImagePtr buffer_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", displayBuffer(buf, cols, rows)).toImageMsg();
+                sensor_msgs::ImagePtr buffer_msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", bufferImg_).toImageMsg();
                 buffer_imgPub.publish(buffer_msg);
+                // int data[rows][cols];
+                // for(int i=0; i<rows*cols; i++){
+                    // if(buf[i]>0) data[i/cols][i%cols] = 255;
+                    // else data[i/cols][i%cols] = 0;
+                // }
+                // cv::Mat imgBuf(rows, cols, CV_8UC1, &data);
+                // sensor_msgs::ImagePtr buffer_msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", imgBuf).toImageMsg(); 
+                // buffer_imgPub.publish(buffer_msg)
+                // cv::imshow("frame", imgBuf);
+                // cv::waitKey(0);
             }
         }
 

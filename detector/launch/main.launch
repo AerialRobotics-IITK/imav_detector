@@ -15,13 +15,13 @@
       <param name="mav_name" value="$(arg mav_name)"/>
       <rosparam file="$(find detector)/cfg/detector.yaml"/>
       <rosparam file="$(env HOME)/.ros/camera_info/mv.yaml"/>
-      <remap from="image" to="/mv/image_raw"/>
+      <remap from="image" to="/usb_cam/image_raw"/>
       <remap from="odometry" to="odom"/>
       <remap from="bounding_boxes" to="bounding_boxes"/>
       <remap from="object_poses" to="object_poses"/>
       <remap from="undist_image" to="undist_image"/>
       <remap from="marked_image" to="marked_image"/>
-      <remap from="buffer" to="buffer"/>
+      <remap from="flood_image" to="flood_image"/>
     </node>
   </group>
 </launch>

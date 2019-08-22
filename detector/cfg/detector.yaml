@@ -1,5 +1,5 @@
 camera:
-  is_rectified: false
+  is_rectified: true
   # enter coordinates of camera origin with respect to quad origin
   translation: [0,0,0]
   # enter rotation matrix for quad to camera frame row-wise
@@ -14,7 +14,7 @@ box:
   maxCentreDist: 120
 
 flags:
-  areaCheck: true
+  areaCheck: false
   diagCheck: true
   eigenCheck: true
   sizeCheck: true
@@ -26,36 +26,36 @@ flags:
 
 # yellow
 yellow:
-  h_min: 110
+  h_min: 115
   h_max: 130
-  s_min: 80
+  s_min: 100
   s_max: 255
-  v_min: 80
+  v_min: 40
   v_max: 255
 
 #red
 red:
   h_min: 90
-  h_max: 110
-  s_min: 80
+  h_max: 104
+  s_min: 60
   s_max: 255
   v_min: 80
   v_max: 255
 
 #blue
 blue:
-  h_min: 10
+  h_min: 8
   h_max: 30
-  s_min: 35
+  s_min: 93
   s_max: 255
-  v_min: 100
+  v_min: 90
   v_max: 255
 
 #orange
 orange:
   h_min: 105
-  h_max: 125
-  s_min: 80
+  h_max: 115
+  s_min: 167
   s_max: 255
   v_min: 100
   v_max: 255

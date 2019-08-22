@@ -15,6 +15,7 @@ find_package(OpenCV 3 REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 cs_add_executable(detector_node src/detector.cxx)
+target_link_libraries(detector_node ${catkin_LIBRARIES} ${OpenCV_LIBRARIES})
 add_dependencies(detector_node ${PROJECT_NAME}_gencfg)
 
 cs_install()
