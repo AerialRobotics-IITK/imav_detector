@@ -263,7 +263,8 @@ std::vector<struct bbox> floodFill(cv::Mat *input, cv::Mat *output, cv::Mat *buf
                 }
                 
                 Box.contourSize = min(contour_index, MAX_CONTOUR_POINTS);
-                Box.store = (sq(Box.x_mean - width/2) + sq(Box.y_mean - height/2) > maxCentreDist) ? false : true;
+                Box.store = ((sq(Box.x_mean - width/2) + sq(Box.y_mean - height/2) > maxCentreDist) &&
+                 (sq(odom.twist.twist.linear.x) + sq(odom.twist.twist.linear.y) < maxStoreVel)) ? false : true;
 
                 if(areaCheckFlag)
                 {

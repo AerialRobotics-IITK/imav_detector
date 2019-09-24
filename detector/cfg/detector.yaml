@@ -12,6 +12,7 @@ box:
   maxDiagIndex: 75
   centreCorrectIndex: 4
   maxCentreDist: 120
+  maxStoreVel : 1
 
 flags:
   areaCheck: false

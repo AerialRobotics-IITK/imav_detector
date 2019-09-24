@@ -62,6 +62,7 @@ float maxEigenIndex = 1.07;
 float centreCorrectIndex = 4;
 float minSizeHeight = 3.000;
 float maxCentreDist = 0.5;
+float maxStoreVel = 1;
 
 bool eigenPassed = false;
 bool diagPassed = false;
@@ -148,6 +149,8 @@ void cfgCallback(detector::reconfigConfig &config, uint32_t level){
                      ROS_INFO("Set centreCorrectIndex to %f", centreCorrectIndex); break;
             case 37: maxCentreDist = config.groups.box.maxCentreDist;
                      ROS_INFO("Set maxCentreDist to %f", maxCentreDist); break;
+            case 39: maxStoreVel = config.groups.box.maxStoreVel;
+                     ROS_INFO("Set maxStoreVel to %f", maxStoreVel); break;
 
             case 18: debug = config.groups.flags.debug;
                      ROS_INFO("Set debug to %d", debug); break;
@@ -286,6 +289,7 @@ void loadParams(ros::NodeHandle nh)
     nh.getParam("box/maxDiagIndex", maxDiagIndex);
     nh.getParam("box/centerCorrectIndex", centreCorrectIndex);
     nh.getParam("box/maxCentreDist", maxCentreDist);
+    nh.getParam("box/maxStoreVel", maxStoreVel);
 
     nh.getParam("camera/translation", tempList);
     for (int i = 0; i < 3; i++)
