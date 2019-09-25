@@ -50,6 +50,7 @@ bool diagCheckFlag = true;
 bool areaCheckFlag = true;
 bool sizeCheckFlag = true;
 bool centreCorrect = true;
+bool doHistEqualize = true;
 
 bool debug = true;
 bool verbose = false;
@@ -279,6 +280,7 @@ void loadParams(ros::NodeHandle nh)
     nh.getParam("flags/areaCheck", areaCheckFlag);
     nh.getParam("flags/sizeCheck", sizeCheckFlag);
     nh.getParam("flags/centreCorrect", centreCorrect);
+    nh.getParam("flags/histEqualize", doHistEqualize);
 
     nh.getParam("flags/debug", debug);
     nh.getParam("flags/verbose", verbose);
@@ -395,13 +397,16 @@ void imageCallback(const sensor_msgs::Image msg)
     }
 
     img_ = cv_ptr->image;
-    std::vector<cv::Mat> hsv_planes(3);
-    cv::cvtColor(img_,img_,CV_BGR2HSV);
-    cv::split(img_,hsv_planes);
-    cv::equalizeHist(hsv_planes.at(1),hsv_planes.at(1));
-    cv::equalizeHist(hsv_planes.at(2),hsv_planes.at(2));
-    cv::merge(hsv_planes,img_);
-    cv::cvtColor(img_,img_,CV_HSV2BGR);
+    if(doHistEqualize)
+    {
+        std::vector<cv::Mat> hsv_planes(3);
+        cv::cvtColor(img_,img_,CV_BGR2HSV);
+        cv::split(img_,hsv_planes);
+        cv::equalizeHist(hsv_planes.at(1),hsv_planes.at(1));
+        cv::equalizeHist(hsv_planes.at(2),hsv_planes.at(2));
+        cv::merge(hsv_planes,img_);
+        cv::cvtColor(img_,img_,CV_HSV2BGR);
+    }
     imageID = msg.header.seq;
     markedImg_ = cv::Mat(msg.height, msg.width, CV_8UC3);
   }

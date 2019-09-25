@@ -22,6 +22,7 @@ flags:
   centreCorrect: false
   debug: true
   verbose: false
+  histEqualize: true
 
 # input_hsv = (actual_hsv + 90) % 180
 
