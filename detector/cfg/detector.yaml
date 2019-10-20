@@ -1,0 +1,74 @@
+camera:
+  is_rectified: true
+  # enter coordinates of camera origin with respect to quad origin
+  translation: [0,0,0]
+  # enter rotation matrix for quad to camera frame row-wise
+  rotation: [0,-1,0,-1,0,0,0,0,-1]
+
+box:
+  minSize: 2000
+  maxAreaIndex: 0.2
+  maxEigenIndex: 1.069
+  maxDiagIndex: 75
+  centreCorrectIndex: 4
+  maxCentreDist: 120
+  maxStoreVel : 1
+
+flags:
+  areaCheck: false
+  diagCheck: true
+  eigenCheck: true
+  sizeCheck: true
+  centreCorrect: false
+  debug: true
+  verbose: false
+  histEqualize: true
+
+# input_hsv = (actual_hsv + 90) % 180
+
+# yellow
+yellow:
+  h_min: 115
+  h_max: 130
+  s_min: 100
+  s_max: 255
+  v_min: 40
+  v_max: 255
+
+#red
+red:
+  h_min: 90
+  h_max: 104
+  s_min: 60
+  s_max: 255
+  v_min: 80
+  v_max: 255
+
+#blue
+blue:
+  h_min: 8
+  h_max: 30
+  s_min: 93
+  s_max: 255
+  v_min: 90
+  v_max: 255
+
+#orange
+orange:
+  h_min: 105
+  h_max: 115
+  s_min: 167
+  s_max: 255
+  v_min: 100
+  v_max: 255
+
+sizes:
+  #enter object area in sq.m.
+  red: 0.4875
+  blue: 0
+  yellow: 0.609
+  orange: 0.5
+  #enter size tolerance in sq.m.
+  tolerance: 1
+  #height in metres
+  minHeight: 0.000
